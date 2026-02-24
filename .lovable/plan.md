@@ -1,98 +1,116 @@
 
 
-# African Tembo Safari — Frontend MVP Plan
+# Phase 2: Public Pages + Booking Flow + Admin Dashboard
 
-## Design System & Branding
-- Color tokens: **Safari Brown** `#7A4A2B` (primary), **Warm Cream** `#F7F3EE` (background), **Deep Black** `#111111` (text/foreground)
-- Your Tembo Safari logo integrated throughout
-- Warm, premium safari aesthetic with elegant typography
-- Fully responsive (mobile-first)
+Building all remaining pages from the approved plan. This is a large phase covering the public website pages, the 3-step booking flow, and the full admin dashboard.
 
 ---
 
-## Public Website (Customer-Facing)
+## Part A: Public Website Pages
 
-### 1. Homepage
-- Hero section with large safari imagery and a compelling tagline
-- Smart search bar (destination, dates, travelers)
-- Featured packages carousel
-- "Why Choose Us" highlights section
-- Testimonials section
-- Call-to-action for booking
-- Footer with links, contact info, social media
+### 1. Package Listing Page (`/packages`)
+- Grid of safari package cards with filters (destination, duration, difficulty, price range)
+- Sort by price, popularity, or duration
+- Responsive grid layout with the existing card design from HomePage
 
-### 2. Package Listing Page
-- Grid/list view of safari packages with filters (destination, duration, difficulty, price range)
-- Sort options (price, popularity, duration)
-- Package cards showing image, title, price, duration, and difficulty badge
+### 2. Package Detail Page (`/packages/:slug`)
+- Image gallery with thumbnails
+- Full description, day-by-day itinerary with accordion
+- Highlights, includes/excludes lists
+- Pricing table (per person + group discount)
+- "Book Now" button linking to booking flow
+- Related packages section
 
-### 3. Package Detail Page
-- Image gallery
-- Full description, itinerary (day-by-day), highlights
-- Includes/excludes list
-- Pricing table (per person, group discounts)
-- "Book Now" call-to-action
-- Related packages
+### 3. Booking Flow (`/book/:slug`) - 3 Steps
+- **Step 1 - Select:** Pick dates (date picker), number of travelers, room preferences
+- **Step 2 - Details:** Traveler information form (name, email, phone, dietary/special needs) for each traveler
+- **Step 3 - Review:** Summary of selections, total price, confirm button
+- **Confirmation page** with booking reference number
 
-### 4. 3-Step Booking Flow
-- **Step 1:** Select dates, travelers, room preferences
-- **Step 2:** Traveler details form (names, contacts, dietary/special needs)
-- **Step 3:** Review & confirm (summary + payment placeholder)
-- Confirmation page with booking reference
-
-### 5. Supporting Pages
-- **About / Team** — Company story, team members, mission
-- **Destination Guides** — Safari destination info pages
-- **Contact** — Contact form + map + office details
-- **FAQ** — Accordion-style frequently asked questions
-- **Terms & Privacy** — Legal pages
-
-### 6. Navigation
-- Sticky top navigation bar with logo, main links, and "Book Now" button
-- Mobile hamburger menu
+### 4. Supporting Pages
+- **About** (`/about`) - Company story, team members grid, mission statement
+- **Contact** (`/contact`) - Contact form (name, email, subject, message) + office details
+- **Destinations** (`/destinations`) - Destination cards with descriptions and package counts
+- **FAQ** (`/faq`) - Accordion-style Q&A
+- **Terms** (`/terms`) and **Privacy** (`/privacy`) - Legal text pages
 
 ---
 
-## Admin Dashboard
+## Part B: Admin Dashboard
 
-### 7. Admin Login
-- Dedicated `/admin` login page with email/password form
-- Mock authentication (easily replaceable with your auth microservice)
+### 5. Admin Layout & Auth
+- Admin login page (`/admin`) with email/password form using mock auth
+- Sidebar layout component (`AdminLayout`) with navigation
+- Auth context to protect admin routes
 
-### 8. Dashboard Overview
-- Key metrics cards: total bookings, revenue, active packages, new inquiries
-- Recent bookings table
-- Quick charts (bookings over time, revenue trends)
+### 6. Dashboard Overview (`/admin/dashboard`)
+- Metric cards: total bookings, revenue, active packages, new inquiries
+- Recent bookings table (last 5)
+- Simple charts using Recharts (bookings over time, revenue trend)
 
-### 9. Package Management
+### 7. Package Management (`/admin/packages`)
 - Table listing all packages with status badges (draft/published/archived)
-- Create/edit package form (title, description, itinerary builder, pricing, images)
-- Publish/archive actions
+- Create/edit package form in a dialog or dedicated page (title, description, itinerary builder, pricing, images)
+- Publish/archive toggle actions
 
-### 10. Booking Management
-- Searchable/filterable bookings table
+### 8. Booking Management (`/admin/bookings`)
+- Searchable, filterable bookings table
 - Booking detail view (traveler info, package, dates, payment status)
-- Status updates (pending → confirmed → completed)
+- Status update dropdown (pending, confirmed, completed, cancelled)
 
-### 11. User Management
-- User listing table with role badges
+### 9. User Management (`/admin/users`)
+- User table with role badges (admin/customer)
 - View user details and their booking history
 
-### 12. Payment Tracking
-- Payments table with status (paid, pending, refunded)
-- Revenue summary cards
+### 10. Payment Tracking (`/admin/payments`)
+- Payments table with status badges (paid, pending, refunded)
+- Revenue summary cards at the top
 
 ---
 
-## Architecture (Frontend-Ready for Microservices)
+## Technical Details
 
-All data will come through a **centralized API service layer** with mock data. Each "service" (packages, bookings, users, payments) will have its own module, mapping directly to your microservice endpoints. When you export to GitHub, you simply swap the mock implementations for real API calls to your Kong Gateway.
+### New Files to Create
 
-- `services/packageService.ts` → maps to your Package Service
-- `services/bookingService.ts` → maps to your Booking Service
-- `services/userService.ts` → maps to your User Service
-- `services/paymentService.ts` → maps to your Payment Service
-- `services/authService.ts` → maps to your User/Auth Service
+**Public Pages:**
+- `src/pages/PackagesPage.tsx`
+- `src/pages/PackageDetailPage.tsx`
+- `src/pages/BookingPage.tsx` (multi-step form)
+- `src/pages/BookingConfirmation.tsx`
+- `src/pages/AboutPage.tsx`
+- `src/pages/ContactPage.tsx`
+- `src/pages/DestinationsPage.tsx`
+- `src/pages/FaqPage.tsx`
+- `src/pages/TermsPage.tsx`
+- `src/pages/PrivacyPage.tsx`
 
-This gives you a production-ready frontend that plugs directly into your microservice architecture.
+**Admin:**
+- `src/pages/admin/AdminLogin.tsx`
+- `src/pages/admin/AdminDashboard.tsx`
+- `src/pages/admin/AdminPackages.tsx`
+- `src/pages/admin/AdminBookings.tsx`
+- `src/pages/admin/AdminUsers.tsx`
+- `src/pages/admin/AdminPayments.tsx`
+- `src/components/AdminLayout.tsx`
+- `src/components/AdminSidebar.tsx`
+- `src/contexts/AuthContext.tsx`
+
+**Shared Components:**
+- `src/components/PackageCard.tsx` (reusable card extracted from HomePage)
+- `src/components/PackageFilters.tsx`
+- `src/components/BookingSteps.tsx` (step indicator)
+
+### Files to Modify
+- `src/App.tsx` - Add all new routes (public + admin with protected wrapper)
+- `src/components/Navbar.tsx` - Ensure all nav links point to real routes
+- `src/services/authService.ts` - Add mock login/logout/session methods
+
+### Patterns & Conventions
+- All pages use the existing color tokens (Safari Brown, Warm Cream, Deep Black)
+- Framer Motion `fadeUp` animation pattern from HomePage reused across pages
+- Service layer pattern maintained -- all data flows through `src/services/`
+- Shadcn UI components (Card, Button, Badge, Accordion, Table, Tabs, Dialog) used consistently
+- Date picker uses Shadcn Calendar with `pointer-events-auto` class
+- Recharts for admin dashboard charts (already installed)
+- Mobile-first responsive design throughout
 
