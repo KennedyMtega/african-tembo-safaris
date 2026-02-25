@@ -23,6 +23,13 @@ import AdminPackages from "@/pages/admin/AdminPackages";
 import AdminBookings from "@/pages/admin/AdminBookings";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminPayments from "@/pages/admin/AdminPayments";
+import AdminAnalytics from "@/pages/admin/AdminAnalytics";
+import AdminDestinations from "@/pages/admin/AdminDestinations";
+import AdminReviews from "@/pages/admin/AdminReviews";
+import AdminInquiries from "@/pages/admin/AdminInquiries";
+import AdminActivityLog from "@/pages/admin/AdminActivityLog";
+import AdminSettings from "@/pages/admin/AdminSettings";
+import AdminReports from "@/pages/admin/AdminReports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,10 +61,17 @@ const App = () => (
             <Route path="/admin" element={<AdminLogin />} />
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/analytics" element={<AdminAnalytics />} />
               <Route path="/admin/packages" element={<AdminPackages />} />
               <Route path="/admin/bookings" element={<AdminBookings />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/payments" element={<AdminPayments />} />
+              <Route path="/admin/destinations" element={<AdminDestinations />} />
+              <Route path="/admin/reviews" element={<AdminReviews />} />
+              <Route path="/admin/inquiries" element={<AdminInquiries />} />
+              <Route path="/admin/activity" element={<AdminActivityLog />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
+              <Route path="/admin/reports" element={<AdminReports />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
