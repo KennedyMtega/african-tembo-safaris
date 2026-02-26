@@ -56,12 +56,35 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Parse request body
-    const { email, password, fullName, role } = await req.json();
+    // Parse and validate request body
+    const body = await req.json();
+    const { email, password, fullName, role } = body;
 
-    if (!email || !password || !fullName || !role) {
+    if (!email || typeof email !== "string" || !password || typeof password !== "string" || !fullName || typeof fullName !== "string" || !role || typeof role !== "string") {
       return new Response(
-        JSON.stringify({ error: "email, password, fullName, and role are required" }),
+        JSON.stringify({ error: "email, password, fullName, and role are required and must be strings" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email) || email.length > 255) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format or exceeds 255 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (password.length < 8 || password.length > 128) {
+      return new Response(
+        JSON.stringify({ error: "Password must be between 8 and 128 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (fullName.trim().length === 0 || fullName.length > 200) {
+      return new Response(
+        JSON.stringify({ error: "Full name must be between 1 and 200 characters" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

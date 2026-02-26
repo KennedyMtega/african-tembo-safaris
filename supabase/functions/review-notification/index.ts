@@ -40,9 +40,20 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { reviewId, action } = await req.json();
-    if (!reviewId || !action) {
-      return new Response(JSON.stringify({ error: "Missing reviewId or action" }), {
+    const body = await req.json();
+    const { reviewId, action } = body;
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const allowedActions = ["submitted", "approved", "rejected"];
+
+    if (!reviewId || typeof reviewId !== "string" || !uuidRegex.test(reviewId)) {
+      return new Response(JSON.stringify({ error: "Invalid or missing reviewId (UUID required)" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!action || typeof action !== "string" || !allowedActions.includes(action)) {
+      return new Response(JSON.stringify({ error: `Invalid action. Must be one of: ${allowedActions.join(", ")}` }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
