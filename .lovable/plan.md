@@ -1,225 +1,272 @@
 
 
-# Enterprise Admin Dashboard Overhaul
+# Full Backend Integration: Supabase Database, Auth, and Real-Time Data
 
-Transforming the current basic admin panel into a comprehensive, enterprise-grade dashboard with rich analytics, advanced management features, and business-critical tools for a safari tour operator.
-
----
-
-## What Changes
-
-### 1. Enhanced Dashboard Overview (AdminDashboard.tsx - complete rewrite)
-
-**Metrics Row (8 KPI cards in 2 rows of 4):**
-- Total Revenue (with % change indicator)
-- Total Bookings (with trend arrow)
-- Active Packages
-- Pending Bookings
-- Average Booking Value
-- Conversion Rate
-- Customer Satisfaction (avg rating)
-- Upcoming Departures (next 30 days)
-
-Each card gets an icon, sparkline trend indicator, and percentage change badge.
-
-**Charts Section (2-column grid):**
-- Revenue Over Time (Area chart - 12 months)
-- Bookings by Destination (Pie/Donut chart)
-- Monthly Bookings Trend (Bar chart)
-- Revenue by Package (Horizontal bar chart)
-
-**Activity Feed:**
-- Recent activity timeline showing bookings, payments, cancellations with timestamps and action badges
-
-**Quick Actions Panel:**
-- Create New Package button
-- Export Reports button
-- View All Bookings button
-- Send Notifications button
+This plan removes all mock/dummy data and connects the entire application to Supabase, adds real user authentication, a customer dashboard, price-range display, full-page CRUD UIs in admin, and notification edge functions.
 
 ---
 
-### 2. Enhanced Sidebar (AdminSidebar.tsx - complete rewrite)
+## Phase 1: Database Schema (Supabase Migration)
 
-**Collapsible sidebar with sections:**
-- Logo + collapse toggle
-- **Main:** Dashboard, Analytics
-- **Management:** Packages, Bookings, Users, Payments
-- **Operations:** Destinations, Reviews, Inquiries
-- **System:** Settings, Activity Log, Reports
+Create all tables with RLS policies and helper functions.
 
-Includes:
-- Active route highlighting
-- Badge counters (e.g., "3" pending bookings)
-- User avatar and role display at the bottom
-- Collapse to icon-only mini mode
+### Enums
+- `app_role` (admin, user)
+- `package_status` (draft, published, archived)
+- `booking_status` (pending, confirmed, completed, cancelled)
+- `payment_status` (pending, paid, refunded)
+- `inquiry_status` (new, in_progress, resolved)
+- `inquiry_priority` (low, medium, high)
+- `review_status` (pending, approved, rejected)
+- `difficulty_level` (easy, moderate, challenging)
 
----
+### Tables
 
-### 3. Analytics Page (NEW - AdminAnalytics.tsx)
+**`profiles`** - linked to `auth.users(id)` ON DELETE CASCADE
+- id (uuid, PK, references auth.users), full_name, email, phone, avatar_url, created_at
 
-A dedicated analytics page with:
-- Date range picker (last 7d, 30d, 90d, 1yr, custom)
-- Revenue analytics (line chart with comparison to previous period)
-- Booking funnel (visits -> inquiries -> bookings -> completed)
-- Top performing packages table with revenue, booking count, rating
-- Customer demographics breakdown
-- Seasonal trends heatmap-style display
-- Exportable data tables
+**`user_roles`** - separate role table (security best practice)
+- id, user_id (references auth.users), role (app_role enum)
+- `has_role()` security definer function for RLS
 
----
+**`destinations`**
+- id, name, country, description, image_url, created_at, updated_at
 
-### 4. Enhanced Package Management (AdminPackages.tsx - major upgrade)
+**`packages`**
+- id, title, slug (unique), description, short_description, destination_id (FK to destinations), duration, difficulty, price_min, price_max, group_price_min, group_price_max, max_group_size, images (text[]), highlights (text[]), tags (text[]), includes (text[]), excludes (text[]), status, rating, review_count, featured, created_at, updated_at
 
-- Search and filter bar (by status, destination, price range)
-- Grid/list view toggle
-- Inline editing capability
-- Expanded create/edit form in a full dialog with:
-  - Image URL management (multiple images)
-  - Day-by-day itinerary builder (add/remove days)
-  - Includes/excludes checklist builder
-  - Featured toggle, difficulty selector
-  - Slug auto-generation from title
-  - Preview mode before publishing
-- Bulk actions (archive multiple, publish multiple)
-- Duplicate package action
-- Package performance stats (bookings, revenue, rating) shown inline
+**`package_itinerary`**
+- id, package_id (FK), day_number, title, description, meals (text[]), accommodation, created_at
 
----
+**`bookings`**
+- id, booking_ref (unique), package_id (FK), user_id (FK to auth.users), status, start_date, end_date, total_amount, payment_status, special_requests, created_at
 
-### 5. Enhanced Booking Management (AdminBookings.tsx - major upgrade)
+**`booking_travelers`**
+- id, booking_id (FK), first_name, last_name, email, phone, dietary_needs, special_needs
 
-- Date range filter
-- Export to CSV button (mock)
-- Expandable row detail view showing:
-  - All traveler information
-  - Payment details
-  - Special requests
-  - Timeline of status changes
-- Booking detail slide-over panel
-- Bulk status update capability
-- Email notification trigger (mock) for status changes
+**`payments`**
+- id, booking_id (FK), booking_ref, amount, currency, status, method, paid_at, created_at
 
----
+**`reviews`**
+- id, package_id (FK), user_id (FK), rating, title, text, status, featured, created_at
 
-### 6. Enhanced User Management (AdminUsers.tsx - major upgrade)
+**`inquiries`**
+- id, user_id (nullable FK), name, email, subject, message, status, priority, created_at, resolved_at
 
-- Search by name/email
-- Filter by role
-- User detail slide-over panel showing:
-  - Profile info
-  - Booking history list
-  - Total spend
-  - Last active date
-- Add new user dialog
-- Role management (change role)
-- User activity summary cards at top (total users, new this month, active customers)
+**`activity_log`**
+- id, action, description, user_id (FK), entity_id, created_at
+
+**`wishlists`** (customer engagement)
+- id, user_id (FK), package_id (FK), created_at
+
+**`notifications`**
+- id, user_id (FK), title, message, read, type, entity_id, created_at
+
+### Storage
+- Create `package-images` public bucket for package/destination image uploads
+
+### RLS Policies
+- Packages/destinations/itinerary: public SELECT for published; admin full CRUD
+- Bookings/travelers/payments: users see own; admin sees all
+- Reviews: public SELECT for approved; users can INSERT own; admin can UPDATE status
+- Profiles: users read/update own; admin reads all
+- Wishlists/notifications: users manage own only
+- Inquiries: authenticated users can INSERT; admin full access
+- Activity log: admin only
+
+### Triggers
+- Auto-create profile on auth.users insert
+- Auto-create user_roles entry with 'user' role on signup
+- Update `destinations.package_count` when packages change
+- Update `packages.review_count` and `packages.rating` when reviews change
 
 ---
 
-### 7. Enhanced Payment Management (AdminPayments.tsx - major upgrade)
+## Phase 2: Authentication (Supabase Auth)
 
-- Date range filter
-- Payment method filter
-- Revenue charts (pie chart by method, bar by month)
-- Refund action button (mock)
-- Payment detail expansion
-- Export functionality (mock)
-- Outstanding balance alerts
+### Replace mock auth with real Supabase Auth
 
----
+**`src/contexts/AuthContext.tsx`** - Complete rewrite
+- Use `supabase.auth.onAuthStateChange` + `getSession`
+- Fetch profile from `profiles` table
+- Check admin role via `user_roles` table using `has_role()` RPC
+- Expose: user, profile, isAdmin, isLoading, signUp, signIn, signOut, resetPassword
 
-### 8. Destinations Management (NEW - AdminDestinations.tsx)
+**New pages:**
+- `src/pages/auth/LoginPage.tsx` - Email/password login with "Forgot password?" link
+- `src/pages/auth/SignupPage.tsx` - Email/password signup (full_name, email, password)
+- `src/pages/auth/ResetPasswordPage.tsx` - Password reset form (at `/reset-password`)
+- `src/pages/auth/ForgotPasswordPage.tsx` - Request password reset email
 
-- CRUD for safari destinations
-- Destination cards with image, country, package count
-- Link destinations to packages
-- Edit destination details in dialog
+**Booking flow auth gate:**
+- Users can browse packages freely
+- When clicking "Book Now" or reaching Step 3 of booking, if not logged in, show a login/signup modal
+- After authentication, continue booking seamlessly
 
----
-
-### 9. Reviews Management (NEW - AdminReviews.tsx)
-
-- List all customer reviews/testimonials
-- Approve/reject moderation
-- Star rating display
-- Filter by package, rating
-- Featured review toggle
+**Admin login (`/admin`):**
+- Use same Supabase auth but check `has_role(uid, 'admin')` server-side
+- AdminLayout checks role from AuthContext
 
 ---
 
-### 10. Customer Inquiries (NEW - AdminInquiries.tsx)
+## Phase 3: Service Layer Rewrite (Mock -> Supabase)
 
-- Inquiry inbox from contact form submissions
-- Status tracking (new, in-progress, resolved)
-- Reply action (mock)
-- Priority tagging
+All services in `src/services/` rewritten to use `supabase` client:
+
+- **packageService.ts** - CRUD via `supabase.from('packages')`, joins with destinations and itinerary
+- **bookingService.ts** - Insert bookings + travelers, status updates
+- **userService.ts** - Query profiles + roles
+- **paymentService.ts** - Query/insert payments
+- **reviewService.ts** - CRUD reviews with status moderation
+- **inquiryService.ts** - CRUD inquiries
+- **analyticsService.ts** - Aggregate queries for dashboard KPIs (real data from bookings/payments/packages tables)
+- **reportService.ts** - Generate reports from real data
+- **destinationService.ts** (new) - CRUD destinations
+- **notificationService.ts** (new) - CRUD notifications
+- **wishlistService.ts** (new) - Add/remove/list wishlists
+
+React Query hooks in each service for caching and real-time updates.
 
 ---
 
-### 11. Activity Log (NEW - AdminActivityLog.tsx)
+## Phase 4: Price Range Display
 
-- Chronological feed of all admin actions
-- Filter by action type (booking update, package create, payment, etc.)
-- Searchable
-- Shows who did what and when
+### Schema change
+- Packages now have `price_min` and `price_max` instead of single `price`
+- Same for group pricing: `group_price_min` and `group_price_max`
+
+### UI changes across all pages
+- **PackageCard**: Display as `$X,XXX - $X,XXX` instead of single price
+- **PackageDetailPage**: Pricing sidebar shows range with "From $X,XXX to $X,XXX per person"
+- **BookingPage**: Calculate total based on selected options within range
+- **Admin package form**: Two price fields (min/max) for both standard and group pricing
+- **Filters**: Price range slider filter on PackagesPage
 
 ---
 
-### 12. Settings Page (NEW - AdminSettings.tsx)
+## Phase 5: Admin Package Creation - Full Page UI
 
-- Company profile (name, logo, contact info)
-- Currency settings
+### Replace dialog with dedicated full-page form
+
+**`src/pages/admin/AdminPackageForm.tsx`** (new) - Multi-section form page
+- **Basic Info section**: Title (auto-generates slug), short description, full description
+- **Destination & Details**: Destination dropdown (from DB), duration, difficulty selector, max group size
+- **Pricing section**: Price min/max fields, group price min/max, displayed as visual range preview
+- **Images section**: Upload images via Supabase Storage with drag-and-drop area, preview thumbnails, reorder capability
+- **Tags & Highlights section**: Tag input with chips (add/remove), highlights list builder
+- **Includes/Excludes section**: Two-column list builder with add/remove items
+- **Itinerary Builder section**: Add days with title, description, meals checkboxes, accommodation field; drag to reorder
+- **Settings section**: Status (draft/published/archived), featured toggle
+- **Action bar**: Save as Draft, Publish, Preview buttons (sticky at bottom)
+
+Routes: `/admin/packages/new` and `/admin/packages/:id/edit`
+
+---
+
+## Phase 6: Customer Dashboard
+
+### New route: `/dashboard` (protected, requires auth)
+
+**`src/pages/customer/CustomerDashboard.tsx`**
+- Welcome banner with user name and avatar
+- Quick stats: total trips, upcoming trips, total spent
+
+**`src/pages/customer/CustomerBookings.tsx`**
+- List of all user bookings with status badges
+- View booking details (travelers, dates, payment status)
+- Cancel booking action (if status is pending)
+
+**`src/pages/customer/CustomerWishlist.tsx`**
+- Saved/wishlisted packages grid
+- Remove from wishlist, "Book Now" action
+
+**`src/pages/customer/CustomerProfile.tsx`**
+- Edit profile (name, phone, avatar upload)
+- Change password
 - Notification preferences
-- System information display
+
+**`src/components/CustomerLayout.tsx`** - Layout with sidebar navigation for customer area
+
+### Engagement features
+- "Add to Wishlist" heart icon on all package cards
+- "Recommended for You" section on customer dashboard (based on past bookings destination/difficulty)
+- "Recently Viewed" packages tracked in local storage
+- Booking calendar view showing upcoming trips
 
 ---
 
-### 13. Reports Page (NEW - AdminReports.tsx)
+## Phase 7: Edge Functions for Notifications
 
-- Pre-built report templates:
-  - Revenue Report (by period)
-  - Booking Report (by destination/package)
-  - Customer Report (demographics, repeat customers)
-  - Package Performance Report
-- Mock PDF/CSV export buttons
-- Date range selection for each report
+### `supabase/functions/booking-notification/index.ts`
+- Triggered when a booking is created/updated
+- Sends notification to user (stored in notifications table)
+- Sends notification to admin
+
+### `supabase/functions/review-notification/index.ts`
+- When a review is submitted, notify admin for moderation
+- When review is approved, notify the user
+
+### `supabase/functions/recommendation-engine/index.ts`
+- Takes user_id, returns recommended package IDs
+- Based on: past booking destinations, difficulty level, similar users' bookings
+- Called from customer dashboard
+
+### Notification bell in Navbar
+- Show unread count badge
+- Dropdown with recent notifications
+- Mark as read functionality
 
 ---
 
-## Technical Details
+## Phase 8: Admin Dashboard Sync with Real Data
 
-### New Files to Create
-- `src/pages/admin/AdminAnalytics.tsx`
-- `src/pages/admin/AdminDestinations.tsx`
-- `src/pages/admin/AdminReviews.tsx`
-- `src/pages/admin/AdminInquiries.tsx`
-- `src/pages/admin/AdminActivityLog.tsx`
-- `src/pages/admin/AdminSettings.tsx`
-- `src/pages/admin/AdminReports.tsx`
-- `src/data/mockAdminData.ts` (additional mock data for inquiries, activity log, reviews, extended chart data)
-- `src/services/analyticsService.ts`
-- `src/services/inquiryService.ts`
-- `src/services/reviewService.ts`
-- `src/services/reportService.ts`
-- `src/types/admin.ts` (Inquiry, ActivityLogEntry, Review, AnalyticsData types)
+### AdminDashboard.tsx
+- All KPI cards computed from real Supabase aggregates (SUM, COUNT, AVG on bookings/payments)
+- Charts pull from real booking/payment data grouped by month
+- Activity feed from activity_log table
+- Destination stats computed from actual booking counts
 
-### Files to Heavily Modify
-- `src/components/AdminSidebar.tsx` - Complete rewrite with collapsible sections, badges, user info
-- `src/components/AdminLayout.tsx` - Add top header bar with breadcrumbs, notifications bell, user menu
-- `src/pages/admin/AdminDashboard.tsx` - Complete rewrite with KPIs, charts, activity feed
-- `src/pages/admin/AdminPackages.tsx` - Add search/filter, grid view, expanded CRUD, bulk actions
-- `src/pages/admin/AdminBookings.tsx` - Add date filters, expandable rows, export, detail panel
-- `src/pages/admin/AdminUsers.tsx` - Add search, detail panel, role management, stats
-- `src/pages/admin/AdminPayments.tsx` - Add charts, filters, refund actions, export
-- `src/App.tsx` - Add routes for all new admin pages
+### All admin management pages
+- Remove all mock data imports
+- Use React Query hooks to fetch from Supabase
+- Real-time updates where applicable (bookings, inquiries)
 
-### Patterns
-- All new pages follow the service layer pattern (new services for analytics, inquiries, reviews, reports)
-- Strict color tokenization using existing safari tokens throughout
-- Recharts for all chart components (already installed)
-- Shadcn UI components (Tabs, Sheet for slide-overs, Accordion, Progress, etc.)
-- Framer Motion for subtle page transitions
-- Responsive: sidebar collapses on mobile, tables become card layouts on small screens
-- Mock data structured to be easily replaceable with real API endpoints
+---
+
+## Phase 9: Cleanup
+
+- Delete `src/data/mockData.ts` and `src/data/mockAdminData.ts`
+- Remove all `import { mock... }` references
+- Update `src/App.tsx` with new auth routes, customer dashboard routes, package form route
+- Update Navbar with auth state (show Login/Signup or User menu with Dashboard link)
+
+---
+
+## Files Summary
+
+### New Files (~20)
+- `src/pages/auth/LoginPage.tsx`, `SignupPage.tsx`, `ResetPasswordPage.tsx`, `ForgotPasswordPage.tsx`
+- `src/pages/customer/CustomerDashboard.tsx`, `CustomerBookings.tsx`, `CustomerWishlist.tsx`, `CustomerProfile.tsx`
+- `src/components/CustomerLayout.tsx`
+- `src/pages/admin/AdminPackageForm.tsx`
+- `src/services/destinationService.ts`, `notificationService.ts`, `wishlistService.ts`
+- `supabase/functions/booking-notification/index.ts`
+- `supabase/functions/review-notification/index.ts`
+- `supabase/functions/recommendation-engine/index.ts`
+
+### Major Rewrites (~15)
+- `src/contexts/AuthContext.tsx` - Supabase auth
+- All 7 service files - mock to Supabase
+- `src/pages/HomePage.tsx`, `PackagesPage.tsx`, `PackageDetailPage.tsx`, `BookingPage.tsx` - remove mock imports, use services + price ranges
+- `src/components/PackageCard.tsx` - price range display
+- `src/components/Navbar.tsx` - auth-aware nav
+- All admin pages - remove mock data, use real queries
+
+### Delete
+- `src/data/mockData.ts`
+- `src/data/mockAdminData.ts`
+
+### Database
+- 1 large migration with all tables, enums, RLS policies, triggers, functions
+- 1 storage bucket creation
 
