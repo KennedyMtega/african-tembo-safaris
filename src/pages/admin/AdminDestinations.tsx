@@ -5,32 +5,45 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { mockDestinations } from "@/data/mockData";
+import { destinationService } from "@/services/destinationService";
 import type { Destination } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, MapPin } from "lucide-react";
+import { Plus, Edit, MapPin, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function AdminDestinations() {
   const { toast } = useToast();
-  const [destinations, setDestinations] = useState<Destination[]>(mockDestinations);
+  const queryClient = useQueryClient();
+  const { data: destinations = [], isLoading } = useQuery({ queryKey: ["admin-destinations"], queryFn: () => destinationService.getAll() });
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Destination | null>(null);
 
-  const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const name = fd.get("name") as string;
+    const dest = {
+      name: fd.get("name") as string,
+      country: fd.get("country") as string,
+      description: fd.get("description") as string,
+      imageUrl: fd.get("imageUrl") as string,
+    };
     if (editing) {
-      setDestinations((prev) => prev.map((d) => d.id === editing.id ? { ...d, name, country: fd.get("country") as string, description: fd.get("description") as string, image: fd.get("image") as string } : d));
+      await destinationService.update(editing.id, dest);
       toast({ title: "Destination updated" });
     } else {
-      const newDest: Destination = { id: `d${Date.now()}`, name, country: fd.get("country") as string, description: fd.get("description") as string, image: fd.get("image") as string, packageCount: 0 };
-      setDestinations((prev) => [...prev, newDest]);
+      await destinationService.create(dest);
       toast({ title: "Destination created" });
     }
+    queryClient.invalidateQueries({ queryKey: ["admin-destinations"] });
     setOpen(false);
     setEditing(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    await destinationService.deleteDestination(id);
+    queryClient.invalidateQueries({ queryKey: ["admin-destinations"] });
+    toast({ title: "Destination deleted" });
   };
 
   const openEdit = (d: Destination) => { setEditing(d); setOpen(true); };
@@ -49,7 +62,7 @@ export default function AdminDestinations() {
             <form onSubmit={handleSave} className="space-y-4">
               <div><Label>Name</Label><Input name="name" required defaultValue={editing?.name} /></div>
               <div><Label>Country</Label><Input name="country" required defaultValue={editing?.country} /></div>
-              <div><Label>Image URL</Label><Input name="image" defaultValue={editing?.image} /></div>
+              <div><Label>Image URL</Label><Input name="imageUrl" defaultValue={editing?.imageUrl} /></div>
               <div><Label>Description</Label><Textarea name="description" defaultValue={editing?.description} /></div>
               <Button type="submit" className="w-full">{editing ? "Update" : "Create"}</Button>
             </form>
@@ -57,27 +70,36 @@ export default function AdminDestinations() {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {destinations.map((d) => (
-          <Card key={d.id} className="border-border/50 overflow-hidden hover:shadow-md transition-shadow">
-            <div className="h-36 overflow-hidden">
-              <img src={d.image} alt={d.name} className="h-full w-full object-cover" />
-            </div>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-display text-sm font-semibold text-foreground">{d.name}</h3>
-                  <p className="text-xs text-muted-foreground">{d.country} · {d.packageCount} packages</p>
-                </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(d)}>
-                  <Edit className="h-3.5 w-3.5" />
-                </Button>
+      {isLoading ? (
+        <p className="py-10 text-center text-muted-foreground">Loading...</p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {destinations.map((d) => (
+            <Card key={d.id} className="border-border/50 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="h-36 overflow-hidden">
+                <img src={d.imageUrl || "/placeholder.svg"} alt={d.name} className="h-full w-full object-cover" />
               </div>
-              <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{d.description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-display text-sm font-semibold text-foreground">{d.name}</h3>
+                    <p className="text-xs text-muted-foreground">{d.country} · {d.packageCount} packages</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(d)}>
+                      <Edit className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(d.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{d.description}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 }

@@ -6,13 +6,17 @@ export interface SafariPackage {
   description: string;
   shortDescription: string;
   destination: string;
-  duration: number; // days
+  destinationId?: string;
+  duration: number;
   difficulty: "easy" | "moderate" | "challenging";
-  price: number;
-  groupPrice?: number;
+  priceMin: number;
+  priceMax: number;
+  groupPriceMin?: number;
+  groupPriceMax?: number;
   maxGroupSize: number;
   images: string[];
   highlights: string[];
+  tags: string[];
   includes: string[];
   excludes: string[];
   itinerary: ItineraryDay[];
@@ -24,6 +28,7 @@ export interface SafariPackage {
 }
 
 export interface ItineraryDay {
+  id?: string;
   day: number;
   title: string;
   description: string;
@@ -36,7 +41,7 @@ export interface Booking {
   id: string;
   bookingRef: string;
   packageId: string;
-  packageTitle: string;
+  packageTitle?: string;
   userId: string;
   status: "pending" | "confirmed" | "completed" | "cancelled";
   startDate: string;
@@ -57,7 +62,16 @@ export interface Traveler {
   specialNeeds?: string;
 }
 
-// ===== User Types =====
+// ===== User / Profile Types =====
+export interface Profile {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  avatarUrl?: string;
+  createdAt: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -98,6 +112,6 @@ export interface Destination {
   name: string;
   country: string;
   description: string;
-  image: string;
+  imageUrl: string;
   packageCount: number;
 }

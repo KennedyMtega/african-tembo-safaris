@@ -4,35 +4,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { mockReviews } from "@/data/mockAdminData";
 import { reviewService } from "@/services/reviewService";
 import type { Review } from "@/types/admin";
 import { useToast } from "@/hooks/use-toast";
 import { Star, Check, X, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const statusColor: Record<string, string> = { approved: "bg-safari-green text-primary-foreground", pending: "bg-safari-gold text-foreground", rejected: "bg-destructive text-destructive-foreground" };
 
 export default function AdminReviews() {
   const { toast } = useToast();
-  const [reviews, setReviews] = useState<Review[]>(mockReviews);
+  const queryClient = useQueryClient();
+  const { data: reviews = [], isLoading } = useQuery({ queryKey: ["admin-reviews"], queryFn: () => reviewService.getAll() });
   const [statusFilter, setStatusFilter] = useState("all");
 
   const filtered = reviews.filter((r) => statusFilter === "all" || r.status === statusFilter);
 
   const updateStatus = async (id: string, status: Review["status"]) => {
     await reviewService.updateStatus(id, status);
-    setReviews((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
+    queryClient.invalidateQueries({ queryKey: ["admin-reviews"] });
     toast({ title: `Review ${status}` });
   };
 
-  const toggleFeatured = async (id: string) => {
-    await reviewService.toggleFeatured(id);
-    setReviews((prev) => prev.map((r) => r.id === id ? { ...r, featured: !r.featured } : r));
+  const toggleFeatured = async (id: string, current: boolean) => {
+    await reviewService.toggleFeatured(id, !current);
+    queryClient.invalidateQueries({ queryKey: ["admin-reviews"] });
     toast({ title: "Featured toggled" });
   };
 
-  const avgRating = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
+  const avgRating = reviews.length > 0 ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : "–";
 
   return (
     <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -61,35 +62,39 @@ export default function AdminReviews() {
 
       <Card className="border-border/50">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Package</TableHead><TableHead>User</TableHead><TableHead>Rating</TableHead><TableHead>Title</TableHead><TableHead>Status</TableHead><TableHead>Featured</TableHead><TableHead className="text-right">Actions</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {filtered.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="text-sm">{r.packageTitle}</TableCell>
-                  <TableCell className="text-sm">{r.userName}</TableCell>
-                  <TableCell>{"⭐".repeat(r.rating)}</TableCell>
-                  <TableCell className="text-sm max-w-48 truncate">{r.title}</TableCell>
-                  <TableCell><Badge className={statusColor[r.status] ?? ""}>{r.status}</Badge></TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleFeatured(r.id)}>
-                      <Sparkles className={`h-3.5 w-3.5 ${r.featured ? "text-safari-gold" : "text-muted-foreground"}`} />
-                    </Button>
-                  </TableCell>
-                  <TableCell className="text-right space-x-1">
-                    {r.status === "pending" && (
-                      <>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-safari-green" onClick={() => updateStatus(r.id, "approved")}><Check className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => updateStatus(r.id, "rejected")}><X className="h-3.5 w-3.5" /></Button>
-                      </>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          {isLoading ? (
+            <p className="p-6 text-center text-sm text-muted-foreground">Loading...</p>
+          ) : (
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Package</TableHead><TableHead>User</TableHead><TableHead>Rating</TableHead><TableHead>Title</TableHead><TableHead>Status</TableHead><TableHead>Featured</TableHead><TableHead className="text-right">Actions</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {filtered.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="text-sm">{r.packageTitle}</TableCell>
+                    <TableCell className="text-sm">{r.userName}</TableCell>
+                    <TableCell>{"⭐".repeat(r.rating)}</TableCell>
+                    <TableCell className="text-sm max-w-48 truncate">{r.title}</TableCell>
+                    <TableCell><Badge className={statusColor[r.status] ?? ""}>{r.status}</Badge></TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleFeatured(r.id, r.featured)}>
+                        <Sparkles className={`h-3.5 w-3.5 ${r.featured ? "text-safari-gold" : "text-muted-foreground"}`} />
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-right space-x-1">
+                      {r.status === "pending" && (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-safari-green" onClick={() => updateStatus(r.id, "approved")}><Check className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => updateStatus(r.id, "rejected")}><X className="h-3.5 w-3.5" /></Button>
+                        </>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </motion.div>

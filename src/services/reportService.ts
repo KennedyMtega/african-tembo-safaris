@@ -1,20 +1,23 @@
-import { mockRevenueData, mockPackagePerformance } from "@/data/mockAdminData";
-import { mockBookings, mockUsers } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
 
 export const reportService = {
   async generateRevenueReport(period: string) {
-    return { period, data: mockRevenueData, generatedAt: new Date().toISOString() };
+    const { data } = await supabase.from("payments").select("*").eq("status", "paid").order("created_at");
+    return data || [];
   },
+
   async generateBookingReport(period: string) {
-    return { period, bookings: mockBookings, generatedAt: new Date().toISOString() };
+    const { data } = await supabase.from("bookings").select("*, packages(title)").order("created_at", { ascending: false });
+    return data || [];
   },
+
   async generateCustomerReport() {
-    return { totalCustomers: mockUsers.filter((u) => u.role === "customer").length, users: mockUsers, generatedAt: new Date().toISOString() };
+    const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+    return data || [];
   },
+
   async generatePackageReport() {
-    return { packages: mockPackagePerformance, generatedAt: new Date().toISOString() };
-  },
-  async exportCSV(reportType: string): Promise<string> {
-    return `data:text/csv;charset=utf-8,Report: ${reportType}\nGenerated: ${new Date().toISOString()}\n`;
+    const { data } = await supabase.from("packages").select("*").order("created_at", { ascending: false });
+    return data || [];
   },
 };

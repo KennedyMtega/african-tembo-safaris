@@ -10,6 +10,7 @@ const breadcrumbMap: Record<string, string> = {
   "/admin/dashboard": "Dashboard",
   "/admin/analytics": "Analytics",
   "/admin/packages": "Packages",
+  "/admin/packages/new": "New Package",
   "/admin/bookings": "Bookings",
   "/admin/users": "Users",
   "/admin/payments": "Payments",
@@ -22,8 +23,10 @@ const breadcrumbMap: Record<string, string> = {
 };
 
 export function AdminLayout() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isLoading } = useAuth();
   const location = useLocation();
+
+  if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="text-muted-foreground">Loading...</p></div>;
   if (!isAdmin) return <Navigate to="/admin" replace />;
 
   const pageTitle = breadcrumbMap[location.pathname] ?? "Admin";
@@ -32,7 +35,6 @@ export function AdminLayout() {
     <div className="flex min-h-screen w-full">
       <AdminSidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top header bar */}
         <header className="flex h-14 items-center justify-between border-b border-border bg-card px-6">
           <div className="flex items-center gap-3">
             <h2 className="font-display text-lg font-semibold text-foreground">{pageTitle}</h2>
@@ -45,11 +47,9 @@ export function AdminLayout() {
             </div>
             <Button variant="ghost" size="icon" className="relative h-8 w-8">
               <Bell className="h-4 w-4 text-muted-foreground" />
-              <Badge className="absolute -right-0.5 -top-0.5 h-4 min-w-4 justify-center rounded-full bg-destructive px-1 text-[9px] text-destructive-foreground">3</Badge>
             </Button>
           </div>
         </header>
-
         <main className="flex-1 overflow-auto bg-background p-6 md:p-8">
           <Outlet />
         </main>

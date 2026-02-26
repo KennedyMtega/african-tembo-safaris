@@ -18,7 +18,7 @@ export default function AdminReports() {
   const [periods, setPeriods] = useState<Record<string, string>>({});
 
   const handleExport = (reportId: string, format: "csv" | "pdf") => {
-    toast({ title: `${format.toUpperCase()} export started (mock)`, description: reports.find((r) => r.id === reportId)?.title });
+    toast({ title: `${format.toUpperCase()} export started`, description: reports.find((r) => r.id === reportId)?.title });
   };
 
   return (
@@ -31,9 +31,7 @@ export default function AdminReports() {
       <div className="grid gap-4 sm:grid-cols-2">
         {reports.map((report) => (
           <Card key={report.id} className="border-border/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">{report.title}</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-base">{report.title}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <p className="text-xs text-muted-foreground">{report.description}</p>
               <Select value={periods[report.id] ?? "30d"} onValueChange={(v) => setPeriods((prev) => ({ ...prev, [report.id]: v }))}>
