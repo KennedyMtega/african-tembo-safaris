@@ -50,6 +50,12 @@ export const bookingService = {
     );
   },
 
+  async getMyBookings(): Promise<Booking[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+    return bookingService.getByUser(user.id);
+  },
+
   async create(booking: {
     packageId: string;
     userId: string;
