@@ -3,11 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 import type { Profile } from "@/types";
 
+type UserRole = "admin" | "management" | "user";
+
 interface AuthContextType {
   user: SupabaseUser | null;
   profile: Profile | null;
   session: Session | null;
   isAdmin: boolean;
+  userRole: UserRole;
   isLoading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -21,8 +24,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole>("user");
   const [isLoading, setIsLoading] = useState(true);
+
+  const isAdmin = userRole === "admin";
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
@@ -38,9 +43,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const checkAdmin = async (userId: string) => {
-    const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-    setIsAdmin(data === true);
+  const fetchRole = async (userId: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .single();
+    if (data) {
+      setUserRole(data.role as UserRole);
+    } else {
+      setUserRole("user");
+    }
   };
 
   useEffect(() => {
@@ -48,14 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Use setTimeout to avoid deadlocks with Supabase auth
         setTimeout(() => {
           fetchProfile(session.user.id);
-          checkAdmin(session.user.id);
+          fetchRole(session.user.id);
         }, 0);
       } else {
         setProfile(null);
-        setIsAdmin(false);
+        setUserRole("user");
       }
       setIsLoading(false);
     });
@@ -65,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
-        checkAdmin(session.user.id);
+        fetchRole(session.user.id);
       }
       setIsLoading(false);
     });
@@ -95,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setProfile(null);
-    setIsAdmin(false);
+    setUserRole("user");
   };
 
   const resetPassword = async (email: string) => {
@@ -106,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, session, isAdmin, isLoading, signUp, signIn, signOut, resetPassword }}>
+    <AuthContext.Provider value={{ user, profile, session, isAdmin, userRole, isLoading, signUp, signIn, signOut, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );
