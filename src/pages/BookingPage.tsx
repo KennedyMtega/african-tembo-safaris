@@ -9,29 +9,41 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BookingSteps } from "@/components/BookingSteps";
 import { cn } from "@/lib/utils";
-import { mockPackages } from "@/data/mockData";
+import { packageService } from "@/services/packageService";
 import { bookingService } from "@/services/bookingService";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Traveler } from "@/types";
+import { useQuery } from "@tanstack/react-query";
 
 const STEPS = ["Select", "Details", "Review"];
 
 export default function BookingPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const pkg = mockPackages.find((p) => p.slug === slug);
+  const { user, signIn, signUp } = useAuth();
+  const { data: pkg, isLoading } = useQuery({ queryKey: ["package", slug], queryFn: () => packageService.getBySlug(slug!) });
 
   const [step, setStep] = useState(1);
   const [startDate, setStartDate] = useState<Date>();
   const [numTravelers, setNumTravelers] = useState(1);
   const [travelers, setTravelers] = useState<Traveler[]>([{ firstName: "", lastName: "", email: "", phone: "" }]);
   const [specialRequests, setSpecialRequests] = useState("");
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authName, setAuthName] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
 
+  if (isLoading) return <div className="container py-20 text-center"><p className="text-muted-foreground">Loading...</p></div>;
   if (!pkg) return <div className="container py-20 text-center"><h1 className="font-display text-2xl font-bold text-foreground">Package not found</h1><Button asChild className="mt-4"><Link to="/packages">Back to Packages</Link></Button></div>;
 
-  const useGroupPrice = pkg.groupPrice && numTravelers >= 4;
-  const pricePerPerson = useGroupPrice ? pkg.groupPrice! : pkg.price;
+  const useGroupPrice = pkg.groupPriceMin && numTravelers >= 4;
+  const pricePerPerson = useGroupPrice ? pkg.groupPriceMin! : pkg.priceMin;
   const totalPrice = pricePerPerson * numTravelers;
 
   const updateTravelerCount = (n: number) => {
@@ -50,23 +62,48 @@ export default function BookingPage() {
   const canProceedStep1 = !!startDate;
   const canProceedStep2 = travelers.every((t) => t.firstName && t.lastName && t.email);
 
+  const handleProceedToStep3 = () => {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
+    setStep(3);
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setAuthLoading(true);
+    if (authMode === "login") {
+      const { error } = await signIn(authEmail, authPassword);
+      if (error) { setAuthError(error); setAuthLoading(false); return; }
+    } else {
+      const { error } = await signUp(authEmail, authPassword, authName);
+      if (error) { setAuthError(error); setAuthLoading(false); return; }
+    }
+    setAuthLoading(false);
+    setShowAuth(false);
+    setStep(3);
+  };
+
   const handleConfirm = async () => {
-    if (!startDate) return;
+    if (!startDate || !user) return;
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + pkg.duration - 1);
-    const booking = await bookingService.create({
-      packageId: pkg.id,
-      packageTitle: pkg.title,
-      userId: "guest",
-      status: "pending",
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      travelers,
-      totalAmount: totalPrice,
-      paymentStatus: "pending",
-      specialRequests,
-    });
-    navigate(`/booking-confirmation/${booking.bookingRef}`);
+    try {
+      const booking = await bookingService.create({
+        packageId: pkg.id,
+        userId: user.id,
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: endDate.toISOString().split("T")[0],
+        travelers,
+        totalAmount: totalPrice,
+        specialRequests,
+      });
+      navigate(`/booking-confirmation/${booking.bookingRef}`);
+    } catch (err: any) {
+      console.error("Booking failed:", err);
+    }
   };
 
   return (
@@ -76,7 +113,6 @@ export default function BookingPage() {
         <p className="mb-8 text-sm text-muted-foreground">{pkg.duration} days · {pkg.destination}</p>
         <div className="mb-8"><BookingSteps currentStep={step} steps={STEPS} /></div>
 
-        {/* Step 1 */}
         {step === 1 && (
           <Card><CardContent className="p-6 space-y-6">
             <div>
@@ -110,7 +146,6 @@ export default function BookingPage() {
           </CardContent></Card>
         )}
 
-        {/* Step 2 */}
         {step === 2 && (
           <Card><CardContent className="p-6 space-y-6">
             {travelers.map((t, idx) => (
@@ -128,12 +163,11 @@ export default function BookingPage() {
             <div><Label>Special Requests</Label><Textarea value={specialRequests} onChange={(e) => setSpecialRequests(e.target.value)} placeholder="Any special requirements..." /></div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-              <Button className="flex-1" disabled={!canProceedStep2} onClick={() => setStep(3)}>Continue</Button>
+              <Button className="flex-1" disabled={!canProceedStep2} onClick={handleProceedToStep3}>Continue</Button>
             </div>
           </CardContent></Card>
         )}
 
-        {/* Step 3 */}
         {step === 3 && (
           <Card><CardContent className="p-6 space-y-6">
             <h2 className="font-display text-xl font-bold text-foreground">Booking Summary</h2>
@@ -155,6 +189,33 @@ export default function BookingPage() {
           </CardContent></Card>
         )}
       </div>
+
+      {/* Auth Modal */}
+      <Dialog open={showAuth} onOpenChange={setShowAuth}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">{authMode === "login" ? "Sign In" : "Create Account"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAuth} className="space-y-4">
+            {authMode === "signup" && (
+              <div><Label>Full Name</Label><Input value={authName} onChange={(e) => setAuthName(e.target.value)} required /></div>
+            )}
+            <div><Label>Email</Label><Input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} required /></div>
+            <div><Label>Password</Label><Input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} required minLength={6} /></div>
+            {authError && <p className="text-sm text-destructive">{authError}</p>}
+            <Button type="submit" className="w-full" disabled={authLoading}>
+              {authLoading ? "Please wait..." : authMode === "login" ? "Sign In" : "Sign Up"}
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              {authMode === "login" ? (
+                <>Don't have an account? <button type="button" className="text-primary hover:underline" onClick={() => setAuthMode("signup")}>Sign up</button></>
+              ) : (
+                <>Already have an account? <button type="button" className="text-primary hover:underline" onClick={() => setAuthMode("login")}>Sign in</button></>
+              )}
+            </p>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { mockPackages } from "@/data/mockData";
+import { packageService } from "@/services/packageService";
 import { PackageCard } from "@/components/PackageCard";
 import { PackageFilters } from "@/components/PackageFilters";
+import { useQuery } from "@tanstack/react-query";
 
 export default function PackagesPage() {
   const [search, setSearch] = useState("");
@@ -10,24 +11,25 @@ export default function PackagesPage() {
   const [difficulty, setDifficulty] = useState("all");
   const [sortBy, setSortBy] = useState("popular");
 
-  const published = mockPackages.filter((p) => p.status === "published");
-  const destinations = [...new Set(published.map((p) => p.destination))];
+  const { data: packages = [], isLoading } = useQuery({ queryKey: ["packages"], queryFn: () => packageService.getAll() });
+
+  const destinations = [...new Set(packages.map((p) => p.destination))];
 
   const filtered = useMemo(() => {
-    let result = published.filter((p) => {
+    let result = packages.filter((p) => {
       if (destination !== "all" && p.destination !== destination) return false;
       if (difficulty !== "all" && p.difficulty !== difficulty) return false;
       if (search && !p.title.toLowerCase().includes(search.toLowerCase()) && !p.shortDescription.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
     switch (sortBy) {
-      case "price-low": result.sort((a, b) => a.price - b.price); break;
-      case "price-high": result.sort((a, b) => b.price - a.price); break;
+      case "price-low": result.sort((a, b) => a.priceMin - b.priceMin); break;
+      case "price-high": result.sort((a, b) => b.priceMax - a.priceMax); break;
       case "duration": result.sort((a, b) => a.duration - b.duration); break;
       default: result.sort((a, b) => b.reviewCount - a.reviewCount);
     }
     return result;
-  }, [search, destination, difficulty, sortBy]);
+  }, [packages, search, destination, difficulty, sortBy]);
 
   return (
     <section className="bg-background py-12 md:py-20">
@@ -40,7 +42,9 @@ export default function PackagesPage() {
         <div className="mb-8">
           <PackageFilters destination={destination} setDestination={setDestination} difficulty={difficulty} setDifficulty={setDifficulty} sortBy={sortBy} setSortBy={setSortBy} search={search} setSearch={setSearch} destinations={destinations} />
         </div>
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <p className="py-20 text-center text-muted-foreground">Loading packages...</p>
+        ) : filtered.length === 0 ? (
           <p className="py-20 text-center text-muted-foreground">No packages match your filters.</p>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

@@ -3,21 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { mockActivityLog } from "@/data/mockAdminData";
-import type { ActivityLogEntry } from "@/types/admin";
+import { supabase } from "@/integrations/supabase/client";
 import { Activity, Search } from "lucide-react";
 import { motion } from "framer-motion";
-
-const actionColor: Record<string, string> = {
-  booking_created: "bg-safari-green text-primary-foreground",
-  booking_updated: "bg-safari-gold text-foreground",
-  package_created: "bg-primary text-primary-foreground",
-  package_updated: "bg-accent text-accent-foreground",
-  payment_received: "bg-safari-green text-primary-foreground",
-  user_registered: "bg-secondary text-secondary-foreground",
-  inquiry_resolved: "bg-safari-green text-primary-foreground",
-  review_approved: "bg-safari-gold text-foreground",
-};
+import { useQuery } from "@tanstack/react-query";
 
 const actionLabels: Record<string, string> = {
   booking_created: "Booking Created", booking_updated: "Booking Updated",
@@ -30,9 +19,17 @@ export default function AdminActivityLog() {
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
 
-  const filtered = mockActivityLog.filter((a) => {
+  const { data: activities = [] } = useQuery({
+    queryKey: ["admin-activity"],
+    queryFn: async () => {
+      const { data } = await supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(50);
+      return data || [];
+    },
+  });
+
+  const filtered = activities.filter((a: any) => {
     if (actionFilter !== "all" && a.action !== actionFilter) return false;
-    if (search && !a.description.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !(a.description || "").toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
@@ -59,15 +56,16 @@ export default function AdminActivityLog() {
 
       <Card className="border-border/50">
         <CardContent className="p-4 space-y-4">
-          {filtered.map((a) => (
+          {filtered.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground">No activity recorded yet.</p>
+          ) : filtered.map((a: any) => (
             <div key={a.id} className="flex items-start gap-3 border-b border-border/50 pb-3 last:border-0 last:pb-0">
               <div className="mt-0.5 h-2 w-2 rounded-full bg-primary flex-shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-foreground">{a.description}</p>
                 <div className="mt-1 flex items-center gap-2">
-                  <Badge className={`text-[10px] ${actionColor[a.action] ?? ""}`}>{actionLabels[a.action]}</Badge>
-                  <span className="text-[10px] text-muted-foreground">by {a.userName}</span>
-                  <span className="text-[10px] text-muted-foreground">· {new Date(a.createdAt).toLocaleString()}</span>
+                  <Badge variant="secondary" className="text-[10px]">{actionLabels[a.action] || a.action}</Badge>
+                  <span className="text-[10px] text-muted-foreground">· {new Date(a.created_at).toLocaleString()}</span>
                 </div>
               </div>
             </div>

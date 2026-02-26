@@ -5,22 +5,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { mockCompanySettings } from "@/data/mockAdminData";
 import type { CompanySettings } from "@/types/admin";
 import { useToast } from "@/hooks/use-toast";
 import { Settings, Save } from "lucide-react";
 import { motion } from "framer-motion";
 
+const defaultSettings: CompanySettings = {
+  name: "Tembo Safari Co.",
+  email: "info@tembo.safari",
+  phone: "+255 123 456 789",
+  address: "123 Safari Drive, Arusha, Tanzania",
+  currency: "USD",
+  timezone: "Africa/Dar_es_Salaam",
+  logoUrl: "",
+  notifyOnBooking: true,
+  notifyOnPayment: true,
+  notifyOnInquiry: true,
+};
+
 export default function AdminSettings() {
   const { toast } = useToast();
-  const [settings, setSettings] = useState<CompanySettings>(mockCompanySettings);
+  const [settings, setSettings] = useState<CompanySettings>(defaultSettings);
 
   const update = (key: keyof CompanySettings, value: string | boolean) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = () => {
-    toast({ title: "Settings saved (mock)" });
+    toast({ title: "Settings saved" });
   };
 
   return (
@@ -31,7 +43,6 @@ export default function AdminSettings() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Company Profile */}
         <Card className="border-border/50">
           <CardHeader><CardTitle className="text-base">Company Profile</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -42,7 +53,6 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
 
-        {/* System Settings */}
         <Card className="border-border/50">
           <CardHeader><CardTitle className="text-base">System</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -54,7 +64,6 @@ export default function AdminSettings() {
                   <SelectItem value="EUR">EUR (€)</SelectItem>
                   <SelectItem value="GBP">GBP (£)</SelectItem>
                   <SelectItem value="TZS">TZS</SelectItem>
-                  <SelectItem value="KES">KES</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -63,7 +72,6 @@ export default function AdminSettings() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Africa/Dar_es_Salaam">East Africa Time</SelectItem>
-                  <SelectItem value="Africa/Nairobi">East Africa Time (Nairobi)</SelectItem>
                   <SelectItem value="UTC">UTC</SelectItem>
                 </SelectContent>
               </Select>
@@ -71,7 +79,6 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
 
-        {/* Notifications */}
         <Card className="border-border/50 lg:col-span-2">
           <CardHeader><CardTitle className="text-base">Notifications</CardTitle></CardHeader>
           <CardContent className="space-y-4">

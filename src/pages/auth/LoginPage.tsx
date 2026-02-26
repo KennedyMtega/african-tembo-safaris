@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,15 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import temboLogo from "@/assets/tembo-logo.jpg";
 
-export default function AdminLogin() {
-  const { signIn, isAdmin, isLoading } = useAuth();
+export default function LoginPage() {
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  if (!isLoading && isAdmin) { navigate("/admin/dashboard", { replace: true }); return null; }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,10 +22,7 @@ export default function AdminLogin() {
     const { error } = await signIn(email, password);
     setLoading(false);
     if (error) setError(error);
-    else {
-      // Wait a beat for admin check
-      setTimeout(() => navigate("/admin/dashboard"), 500);
-    }
+    else navigate("/dashboard");
   };
 
   return (
@@ -36,8 +31,8 @@ export default function AdminLogin() {
         <CardContent className="p-6 space-y-6">
           <div className="text-center">
             <img src={temboLogo} alt="Tembo" className="mx-auto h-14 w-14 rounded-full object-cover" />
-            <h1 className="mt-3 font-display text-xl font-bold text-foreground">Admin Login</h1>
-            <p className="text-sm text-muted-foreground">Sign in to manage your safaris</p>
+            <h1 className="mt-3 font-display text-xl font-bold text-foreground">Welcome Back</h1>
+            <p className="text-sm text-muted-foreground">Sign in to your account</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
@@ -45,6 +40,10 @@ export default function AdminLogin() {
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>{loading ? "Signing in..." : "Sign In"}</Button>
           </form>
+          <div className="text-center text-sm space-y-2">
+            <Link to="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
+            <p className="text-muted-foreground">Don't have an account? <Link to="/signup" className="text-primary hover:underline">Sign up</Link></p>
+          </div>
         </CardContent>
       </Card>
     </section>

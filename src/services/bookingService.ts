@@ -1,29 +1,99 @@
-import { mockBookings } from "@/data/mockData";
-import type { Booking } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import type { Booking, Traveler } from "@/types";
+
+function mapBooking(row: any, travelers: any[] = [], packageTitle?: string): Booking {
+  return {
+    id: row.id,
+    bookingRef: row.booking_ref,
+    packageId: row.package_id,
+    packageTitle: packageTitle || row.packages?.title || "",
+    userId: row.user_id,
+    status: row.status,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    totalAmount: Number(row.total_amount),
+    paymentStatus: row.payment_status,
+    specialRequests: row.special_requests,
+    createdAt: row.created_at,
+    travelers: travelers.map((t: any) => ({
+      firstName: t.first_name,
+      lastName: t.last_name,
+      email: t.email,
+      phone: t.phone || "",
+      dietaryNeeds: t.dietary_needs,
+      specialNeeds: t.special_needs,
+    })),
+  };
+}
 
 export const bookingService = {
   async getAll(): Promise<Booking[]> {
-    return mockBookings;
-  },
-
-  async getById(id: string): Promise<Booking | undefined> {
-    return mockBookings.find((b) => b.id === id);
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("*, packages(title), booking_travelers(*)")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data || []).map((row: any) =>
+      mapBooking(row, row.booking_travelers || [], row.packages?.title)
+    );
   },
 
   async getByUser(userId: string): Promise<Booking[]> {
-    return mockBookings.filter((b) => b.userId === userId);
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("*, packages(title), booking_travelers(*)")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data || []).map((row: any) =>
+      mapBooking(row, row.booking_travelers || [], row.packages?.title)
+    );
   },
 
-  async create(booking: Omit<Booking, "id" | "bookingRef" | "createdAt">): Promise<Booking> {
-    const ref = `TEM-${new Date().getFullYear()}-${String(mockBookings.length + 1).padStart(3, "0")}`;
-    const newBooking: Booking = { ...booking, id: `b${Date.now()}`, bookingRef: ref, createdAt: new Date().toISOString() };
-    mockBookings.push(newBooking);
-    return newBooking;
+  async create(booking: {
+    packageId: string;
+    userId: string;
+    startDate: string;
+    endDate: string;
+    totalAmount: number;
+    specialRequests?: string;
+    travelers: Traveler[];
+  }): Promise<Booking> {
+    const ref = `TEM-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999)).padStart(4, "0")}`;
+    
+    const { data, error } = await supabase.from("bookings").insert({
+      booking_ref: ref,
+      package_id: booking.packageId,
+      user_id: booking.userId,
+      start_date: booking.startDate,
+      end_date: booking.endDate,
+      total_amount: booking.totalAmount,
+      special_requests: booking.specialRequests || null,
+      status: "pending",
+      payment_status: "pending",
+    }).select("*, packages(title)").single();
+    if (error) throw error;
+
+    // Insert travelers
+    if (booking.travelers.length > 0) {
+      await supabase.from("booking_travelers").insert(
+        booking.travelers.map((t) => ({
+          booking_id: data.id,
+          first_name: t.firstName,
+          last_name: t.lastName,
+          email: t.email,
+          phone: t.phone || null,
+          dietary_needs: t.dietaryNeeds || null,
+          special_needs: t.specialNeeds || null,
+        }))
+      );
+    }
+
+    return mapBooking(data, [], data.packages?.title);
   },
 
-  async updateStatus(id: string, status: Booking["status"]): Promise<Booking | undefined> {
-    const b = mockBookings.find((b) => b.id === id);
-    if (b) b.status = status;
-    return b;
+  async updateStatus(id: string, status: Booking["status"]): Promise<void> {
+    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+    if (error) throw error;
   },
 };

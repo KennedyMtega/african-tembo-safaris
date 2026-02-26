@@ -1,10 +1,11 @@
 export interface Inquiry {
   id: string;
+  userId?: string;
   name: string;
   email: string;
   subject: string;
   message: string;
-  status: "new" | "in-progress" | "resolved";
+  status: "new" | "in_progress" | "resolved";
   priority: "low" | "medium" | "high";
   createdAt: string;
   resolvedAt?: string;
@@ -12,10 +13,9 @@ export interface Inquiry {
 
 export interface ActivityLogEntry {
   id: string;
-  action: "booking_created" | "booking_updated" | "package_created" | "package_updated" | "payment_received" | "user_registered" | "inquiry_resolved" | "review_approved";
+  action: string;
   description: string;
   userId: string;
-  userName: string;
   entityId?: string;
   createdAt: string;
 }
@@ -23,9 +23,9 @@ export interface ActivityLogEntry {
 export interface Review {
   id: string;
   packageId: string;
-  packageTitle: string;
+  packageTitle?: string;
   userId: string;
-  userName: string;
+  userName?: string;
   rating: number;
   title: string;
   text: string;
@@ -68,4 +68,15 @@ export interface CompanySettings {
   notifyOnBooking: boolean;
   notifyOnPayment: boolean;
   notifyOnInquiry: boolean;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  read: boolean;
+  type?: string;
+  entityId?: string;
+  createdAt: string;
 }
