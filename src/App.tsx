@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PublicLayout } from "@/components/PublicLayout";
 import { AdminLayout } from "@/components/AdminLayout";
+import { CustomerLayout } from "@/components/CustomerLayout";
 import HomePage from "@/pages/HomePage";
 import PackagesPage from "@/pages/PackagesPage";
 import PackageDetailPage from "@/pages/PackageDetailPage";
@@ -17,9 +18,14 @@ import DestinationsPage from "@/pages/DestinationsPage";
 import FaqPage from "@/pages/FaqPage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
+import LoginPage from "@/pages/auth/LoginPage";
+import SignupPage from "@/pages/auth/SignupPage";
+import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 import AdminLogin from "@/pages/admin/AdminLogin";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminPackages from "@/pages/admin/AdminPackages";
+import AdminPackageForm from "@/pages/admin/AdminPackageForm";
 import AdminBookings from "@/pages/admin/AdminBookings";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminPayments from "@/pages/admin/AdminPayments";
@@ -30,6 +36,10 @@ import AdminInquiries from "@/pages/admin/AdminInquiries";
 import AdminActivityLog from "@/pages/admin/AdminActivityLog";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminReports from "@/pages/admin/AdminReports";
+import CustomerDashboard from "@/pages/customer/CustomerDashboard";
+import CustomerBookings from "@/pages/customer/CustomerBookings";
+import CustomerWishlist from "@/pages/customer/CustomerWishlist";
+import CustomerProfile from "@/pages/customer/CustomerProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,12 +67,28 @@ const App = () => (
               <Route path="/privacy" element={<PrivacyPage />} />
             </Route>
 
+            {/* Auth */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+            {/* Customer Dashboard */}
+            <Route element={<CustomerLayout />}>
+              <Route path="/dashboard" element={<CustomerDashboard />} />
+              <Route path="/dashboard/bookings" element={<CustomerBookings />} />
+              <Route path="/dashboard/wishlist" element={<CustomerWishlist />} />
+              <Route path="/dashboard/profile" element={<CustomerProfile />} />
+            </Route>
+
             {/* Admin */}
             <Route path="/admin" element={<AdminLogin />} />
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
               <Route path="/admin/packages" element={<AdminPackages />} />
+              <Route path="/admin/packages/new" element={<AdminPackageForm />} />
+              <Route path="/admin/packages/:id/edit" element={<AdminPackageForm />} />
               <Route path="/admin/bookings" element={<AdminBookings />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/payments" element={<AdminPayments />} />
