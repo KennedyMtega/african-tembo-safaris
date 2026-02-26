@@ -1,4 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
+
+async function notifyBooking(bookingId: string, action: string) {
+  try {
+    await supabase.functions.invoke("booking-notification", {
+      body: { bookingId, action },
+    });
+  } catch (e) {
+    console.warn("Booking notification failed:", e);
+  }
+}
 import type { Booking, Traveler } from "@/types";
 
 function mapBooking(row: any, travelers: any[] = [], packageTitle?: string): Booking {
@@ -95,11 +105,14 @@ export const bookingService = {
       );
     }
 
-    return mapBooking(data, [], data.packages?.title);
+    const result = mapBooking(data, [], data.packages?.title);
+    notifyBooking(data.id, "created");
+    return result;
   },
 
   async updateStatus(id: string, status: Booking["status"]): Promise<void> {
     const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
     if (error) throw error;
+    notifyBooking(id, status === "confirmed" ? "confirmed" : status === "cancelled" ? "cancelled" : status === "completed" ? "completed" : status);
   },
 };
