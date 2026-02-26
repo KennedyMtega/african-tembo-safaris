@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, User, LogOut } from "lucide-react";
+import { Menu, X, User, LogOut, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { notificationService } from "@/services/notificationService";
+import { format } from "date-fns";
 import temboLogo from "@/assets/tembo-logo.jpg";
 
 const navLinks = [
@@ -14,6 +17,60 @@ const navLinks = [
   { label: "Contact", to: "/contact" },
   { label: "FAQ", to: "/faq" },
 ];
+
+function NotificationBell({ userId }: { userId: string }) {
+  const queryClient = useQueryClient();
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["notification-count", userId],
+    queryFn: () => notificationService.getUnreadCount(userId),
+    refetchInterval: 30000,
+  });
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["notifications", userId],
+    queryFn: () => notificationService.getByUser(userId),
+    refetchInterval: 30000,
+  });
+
+  const handleMarkRead = async (id: string) => {
+    await notificationService.markAsRead(id);
+    queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
+    queryClient.invalidateQueries({ queryKey: ["notification-count", userId] });
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative hidden md:inline-flex">
+          <Bell className="h-5 w-5 text-muted-foreground" />
+          {unreadCount > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+        {notifications.length === 0 ? (
+          <div className="p-4 text-center text-sm text-muted-foreground">No notifications</div>
+        ) : (
+          notifications.slice(0, 10).map((n) => (
+            <DropdownMenuItem
+              key={n.id}
+              className={`flex flex-col items-start gap-1 p-3 ${!n.read ? "bg-primary/5" : ""}`}
+              onClick={() => !n.read && handleMarkRead(n.id)}
+            >
+              <span className="text-sm font-medium text-foreground">{n.title}</span>
+              {n.message && <span className="text-xs text-muted-foreground line-clamp-2">{n.message}</span>}
+              <span className="text-[10px] text-muted-foreground">{format(new Date(n.createdAt), "MMM d, h:mm a")}</span>
+            </DropdownMenuItem>
+          ))
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
@@ -42,7 +99,8 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {user && <NotificationBell userId={user.id} />}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

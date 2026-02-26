@@ -5,13 +5,13 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { bookingService } from "@/services/bookingService";
 import { wishlistService } from "@/services/wishlistService";
-import { packageService } from "@/services/packageService";
+import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Heart, MapPin, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 
 export default function CustomerDashboard() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
 
   const { data: bookings = [] } = useQuery({
     queryKey: ["my-bookings"],
@@ -23,9 +23,16 @@ export default function CustomerDashboard() {
     queryFn: () => wishlistService.getAll(),
   });
 
-  const { data: featuredPkgs = [] } = useQuery({
-    queryKey: ["featured-packages"],
-    queryFn: () => packageService.getFeatured(),
+  const { data: recommendations = [] } = useQuery({
+    queryKey: ["recommendations", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("recommendation-engine", {
+        body: { userId: user?.id },
+      });
+      if (error) return [];
+      return data?.recommendations || [];
+    },
+    enabled: !!user,
   });
 
   const upcomingBookings = bookings.filter((b) => b.status !== "cancelled" && new Date(b.startDate) > new Date());
@@ -99,12 +106,12 @@ export default function CustomerDashboard() {
       </Card>
 
       {/* Recommended */}
-      {featuredPkgs.length > 0 && (
+      {recommendations.length > 0 && (
         <Card className="border-border/50">
           <CardHeader><CardTitle className="text-base">Recommended For You</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {featuredPkgs.slice(0, 3).map((pkg) => (
+              {recommendations.slice(0, 3).map((pkg: any) => (
                 <Link key={pkg.id} to={`/packages/${pkg.slug}`} className="group rounded-lg border border-border overflow-hidden hover:shadow-md transition-shadow">
                   <div className="h-28 overflow-hidden">
                     <img src={pkg.images[0] || "/placeholder.svg"} alt={pkg.title} className="h-full w-full object-cover transition-transform group-hover:scale-105" />

@@ -1,4 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
+
+async function notifyReview(reviewId: string, action: string) {
+  try {
+    await supabase.functions.invoke("review-notification", {
+      body: { reviewId, action },
+    });
+  } catch (e) {
+    console.warn("Review notification failed:", e);
+  }
+}
 import type { Review } from "@/types/admin";
 
 function mapReview(row: any): Review {
@@ -41,6 +51,7 @@ export const reviewService = {
   async updateStatus(id: string, status: Review["status"]): Promise<void> {
     const { error } = await supabase.from("reviews").update({ status }).eq("id", id);
     if (error) throw error;
+    notifyReview(id, status);
   },
 
   async toggleFeatured(id: string, featured: boolean): Promise<void> {
