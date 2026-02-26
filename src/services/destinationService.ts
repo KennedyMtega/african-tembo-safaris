@@ -19,6 +19,19 @@ export const destinationService = {
     return (data || []).map(mapDest);
   },
 
+  async uploadImage(file: File): Promise<string> {
+    const ext = file.name.split(".").pop();
+    const fileName = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("destination-images")
+      .upload(fileName, file, { upsert: true });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage
+      .from("destination-images")
+      .getPublicUrl(fileName);
+    return urlData.publicUrl;
+  },
+
   async create(dest: Partial<Destination>): Promise<Destination> {
     const { data, error } = await supabase.from("destinations").insert({
       name: dest.name || "",
@@ -45,5 +58,15 @@ export const destinationService = {
   async deleteDestination(id: string): Promise<void> {
     const { error } = await supabase.from("destinations").delete().eq("id", id);
     if (error) throw error;
+  },
+
+  async getPackagesForDestination(destinationId: string) {
+    const { data, error } = await supabase
+      .from("packages")
+      .select("id, title, slug, status, duration, price_min, price_max, images")
+      .eq("destination_id", destinationId)
+      .order("title");
+    if (error) throw error;
+    return data || [];
   },
 };

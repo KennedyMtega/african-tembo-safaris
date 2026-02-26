@@ -42,13 +42,13 @@ const sections = [
     links: [
       { to: "/admin/activity", label: "Activity Log", icon: Activity },
       { to: "/admin/reports", label: "Reports", icon: FileText },
-      { to: "/admin/settings", label: "Settings", icon: Settings },
+      { to: "/admin/settings", label: "Settings", icon: Settings, adminOnly: true },
     ],
   },
 ];
 
 export function AdminSidebar() {
-  const { profile, signOut } = useAuth();
+  const { profile, userRole, signOut } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -78,7 +78,9 @@ export function AdminSidebar() {
               </p>
             )}
             <div className="space-y-0.5">
-              {section.links.map((l) => (
+              {section.links
+                .filter((l) => !(l as any).adminOnly || userRole === "admin")
+                .map((l) => (
                 <NavLink
                   key={l.to}
                   to={l.to}
@@ -105,7 +107,9 @@ export function AdminSidebar() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold text-sidebar-foreground">{profile.fullName || "Admin"}</p>
-              <p className="truncate text-[10px] text-sidebar-foreground/50">admin</p>
+              <Badge variant={userRole === "admin" ? "default" : "secondary"} className="text-[9px] h-4 px-1.5">
+                {userRole}
+              </Badge>
             </div>
           </div>
         )}
