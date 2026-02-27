@@ -1,98 +1,256 @@
 
+# Phase: Hero Media Management, Gallery, AI Chatbot, CRM, and Admin Login Fix
 
-# Destinations Enhancement + Role-Based Employee Management
-
-## Overview
-
-Three major improvements:
-1. **Destination image uploads** -- replace URL input with file upload to Supabase Storage
-2. **Destination detail view** -- show packages linked to each destination
-3. **Employee management in Settings** -- create staff accounts with "admin" (full access) or "management" (edit/create only, no delete) roles
+This is a large feature set split into logical groups. Each group builds on the previous.
 
 ---
 
-## 1. Storage Bucket for Destination Images
+## 1. Fix Admin Login Routing (Quick Fix)
 
-**Migration**: Create a `destination-images` storage bucket (public) with RLS policies allowing admin uploads and public reads.
+**Problem**: When an admin/employee logs in via `/admin`, they get routed like a customer. Also when logging in via `/login`, admins aren't redirected to the admin dashboard.
+
+**Solution**:
+- `AdminLogin.tsx`: After successful sign-in, wait for the role to be fetched, then navigate to `/admin/dashboard`
+- `LoginPage.tsx`: After sign-in, check the user's role. If admin or management, redirect to `/admin/dashboard` instead of `/dashboard`
+- `AuthContext.tsx`: Make `signIn` return the role so callers can route immediately, or add a `waitForRole` helper
+
+**Files modified**: `src/pages/admin/AdminLogin.tsx`, `src/pages/auth/LoginPage.tsx`, `src/contexts/AuthContext.tsx`
+
+---
+
+## 2. Hero Media Management in Settings
+
+**Database**: Create a `site_settings` table to persist hero images/videos and other site config:
+```text
+site_settings (
+  id uuid PK default gen_random_uuid(),
+  key text UNIQUE NOT NULL,
+  value jsonb NOT NULL,
+  updated_at timestamptz default now()
+)
+```
+RLS: Admin can SELECT/INSERT/UPDATE/DELETE. Public can SELECT.
+
+**Storage**: Create a `site-media` storage bucket (public) for hero images and videos.
+
+**Settings UI**: Add a "Hero Section" card in `AdminSettings.tsx` with:
+- Upload hero image (file picker, preview)
+- Upload hero video (file picker, preview thumbnail)
+- Toggle between image/video mode
+- Save to `site_settings` table with key `hero_media`
+
+**Homepage**: Update `HomePage.tsx` to fetch hero media from `site_settings` instead of the static import. Support both image and video (HTML5 `<video>` tag with autoplay, muted, loop).
+
+**Files created/modified**: Migration SQL, `src/pages/admin/AdminSettings.tsx`, `src/pages/HomePage.tsx`
+
+---
+
+## 3. Public Gallery Page (`/gallery`)
+
+**Database**: Create a `gallery_items` table:
+```text
+gallery_items (
+  id uuid PK,
+  title text,
+  type text NOT NULL ('image' | 'video'),
+  url text NOT NULL,
+  thumbnail_url text,
+  sort_order integer default 0,
+  created_at timestamptz default now()
+)
+```
+RLS: Public SELECT, Admin full access, Management INSERT/UPDATE/SELECT.
+
+**Storage**: Reuse `site-media` bucket for gallery uploads.
+
+**Admin UI**: Add a "Gallery" link in the admin sidebar under Operations. Create `AdminGallery.tsx` with upload interface for images/videos (file upload, not URL), drag-to-reorder, delete.
+
+**Public Page**: Create `GalleryPage.tsx` at `/gallery`:
+- Randomized masonry grid of images
+- Lightweight animations using framer-motion (staggered fade-in, hover zoom)
+- Video items displayed as overlapping cards with autoplay (muted, loop)
+- All media served from Supabase Storage (already optimized on upload via browser-side compression before upload using canvas resize for images)
+- Lazy loading with intersection observer for performance
+
+**Files created**: `src/pages/GalleryPage.tsx`, `src/pages/admin/AdminGallery.tsx`, migration SQL
+**Files modified**: `src/App.tsx` (add route), `src/components/AdminSidebar.tsx` (add link), `src/components/Navbar.tsx` (add public nav link)
+
+---
+
+## 4. AI Chatbot with Knowledge Base (Bring Your Own API Keys)
+
+### 4a. API Key Storage in Settings
+
+Add an "AI Configuration" card in `AdminSettings.tsx`:
+- Input field for Claude API key (masked, stored as Supabase secret via edge function)
+- Input field for Gemini API key (masked, stored similarly)
+- Toggle for which provider to use as primary
+- Keys stored in `site_settings` table (encrypted values) with keys `ai_claude_key` and `ai_gemini_key`
+
+### 4b. Knowledge Base
+
+**Database**: Create a `knowledge_base` table:
+```text
+knowledge_base (
+  id uuid PK,
+  title text NOT NULL,
+  content text NOT NULL,
+  category text,
+  tags text[],
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+)
+```
+RLS: Admin/Management can CRUD. Public can SELECT.
+
+**Admin UI**: Create `AdminKnowledgeBase.tsx` page:
+- List all knowledge articles with search/filter
+- Create/edit articles with title, content (textarea), category, tags
+- Bulk import option
+
+**Sidebar**: Add "Knowledge Base" under Operations in admin sidebar.
+
+### 4c. Chat Edge Function
+
+Create `supabase/functions/ai-chat/index.ts`:
+- Accepts POST with `{ message, conversationId?, userId?, visitorName?, visitorEmail? }`
+- Fetches API keys from `site_settings`
+- Queries `knowledge_base` for relevant articles (keyword match on the message)
+- Builds a system prompt that strictly constrains the AI to only use internal knowledge base content
+- Includes user profile info if logged in (name, booking history, preferences)
+- For visitors: collects name/email and saves to `chat_leads` table (CRM)
+- Supports both Claude and Gemini APIs based on admin's selected provider
+- Returns streamed response
+
+**System prompt rules**:
+- Only answer from knowledge base content
+- Know the user's name and preferences if logged in
+- For visitors, politely collect name and email
+- Never fabricate information outside the knowledge base
+
+### 4d. Chat UI Component
+
+Create `src/components/ChatWidget.tsx`:
+- Floating button (bottom-right corner) on all public pages
+- Expandable chat panel with message history
+- Works for both logged-in users and visitors
+- For visitors: asks for name/email on first message
+- Fast, lightweight overlay -- not a full page
+- Stores conversation in local state (and optionally in a `chat_conversations` table)
+
+### 4e. Chat Tables
 
 ```text
-storage.buckets: destination-images (public)
-RLS on storage.objects:
-  - Public SELECT for destination-images bucket
-  - Admin INSERT/UPDATE/DELETE for destination-images bucket
+chat_conversations (
+  id uuid PK,
+  user_id uuid nullable,
+  visitor_name text,
+  visitor_email text,
+  created_at timestamptz default now()
+)
+
+chat_messages (
+  id uuid PK,
+  conversation_id uuid FK -> chat_conversations,
+  role text NOT NULL ('user' | 'assistant'),
+  content text NOT NULL,
+  created_at timestamptz default now()
+)
 ```
+
+**Files created**: `supabase/functions/ai-chat/index.ts`, `src/components/ChatWidget.tsx`, `src/pages/admin/AdminKnowledgeBase.tsx`, migration SQL
+**Files modified**: `src/App.tsx`, `src/components/PublicLayout.tsx`, `src/components/AdminSidebar.tsx`, `src/pages/admin/AdminSettings.tsx`, `supabase/config.toml`
 
 ---
 
-## 2. Add "management" Role to Database
+## 5. CRM Expansion
 
-**Migration**: Alter the `app_role` enum to add `management` value. Update the `has_role` function and add RLS policies so management users can access admin-level SELECT and INSERT/UPDATE but NOT DELETE on key tables (packages, bookings, destinations, reviews, inquiries).
+### 5a. CRM Database
 
+Create a `crm_contacts` table:
 ```text
-ALTER TYPE public.app_role ADD VALUE 'management';
+crm_contacts (
+  id uuid PK,
+  user_id uuid nullable,
+  name text NOT NULL,
+  email text NOT NULL,
+  phone text,
+  source text ('chat', 'inquiry', 'booking', 'manual'),
+  status text ('lead', 'prospect', 'customer', 'inactive'),
+  notes text,
+  tags text[],
+  last_interaction timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+)
+
+crm_interactions (
+  id uuid PK,
+  contact_id uuid FK -> crm_contacts,
+  type text ('chat', 'inquiry', 'booking', 'note', 'email'),
+  summary text,
+  created_at timestamptz default now()
+)
 ```
+RLS: Admin/Management SELECT, INSERT, UPDATE. Admin DELETE.
 
-New RLS policies on each managed table:
-- Management can SELECT (same as admin)
-- Management can INSERT and UPDATE (same as admin)
-- Management CANNOT DELETE (only admin can)
+### 5b. CRM Admin Page
 
-The existing "Admin manages X" ALL policies will be split into separate SELECT/INSERT/UPDATE/DELETE policies so we can grant management users granular access.
+Create `src/pages/admin/AdminCRM.tsx` -- a full, intensive page (not an overlay):
+- **Header KPIs**: Total contacts, new leads this month, conversion rate, active customers
+- **Contact table** with search, filter by status/source/tags, sortable columns
+- **Contact detail panel** (side sheet or dedicated view): Full profile, interaction timeline, linked bookings, chat history, notes
+- **Lead pipeline view**: Kanban-style columns (Lead -> Prospect -> Customer -> Inactive)
+- **Bulk actions**: Tag, change status, export
+- **Auto-capture**: When chat widget collects visitor info, auto-create CRM contact
+- **Auto-link**: When inquiries come in, create/update CRM contact
+- **Auto-link**: When bookings are made, create/update CRM contact
+
+### 5c. CRM Service
+
+Create `src/services/crmService.ts`:
+- CRUD for contacts and interactions
+- `findOrCreateByEmail(email, name, source)` method
+- Integration points called from booking, inquiry, and chat services
+
+**Files created**: `src/pages/admin/AdminCRM.tsx`, `src/services/crmService.ts`, migration SQL
+**Files modified**: `src/App.tsx`, `src/components/AdminSidebar.tsx`, `src/services/bookingService.ts`, `src/services/inquiryService.ts`
 
 ---
 
-## 3. Updated Files
+## 6. Files Summary
 
-### `src/services/destinationService.ts`
-- Add `uploadImage(file: File)` method that uploads to `destination-images` bucket and returns the public URL
-- Update `create()` and `update()` to accept the public URL from uploaded images
+### New Files (12+)
+- Migration SQL for `site_settings`, `gallery_items`, `knowledge_base`, `chat_conversations`, `chat_messages`, `crm_contacts`, `crm_interactions`, `site-media` bucket
+- `supabase/functions/ai-chat/index.ts`
+- `src/pages/GalleryPage.tsx`
+- `src/pages/admin/AdminGallery.tsx`
+- `src/pages/admin/AdminKnowledgeBase.tsx`
+- `src/pages/admin/AdminCRM.tsx`
+- `src/components/ChatWidget.tsx`
+- `src/services/crmService.ts`
 
-### `src/pages/admin/AdminDestinations.tsx`
-- Replace the "Image URL" text input with a file upload input (`<input type="file" accept="image/*">`)
-- Show image preview before saving
-- On submit, upload the file via `destinationService.uploadImage()`, then save the destination with the returned URL
-- Add a "View Packages" expand/click that shows packages linked to each destination (query packages by `destination_id`)
-- Each destination card shows its linked packages count (already exists) plus a clickable area to see the package list
-
-### `src/pages/admin/AdminSettings.tsx`
-- Add a new "Team Management" card section
-- Shows a table of current employees (users with admin or management roles)
-- "Invite Employee" dialog with fields: Email, Password, Full Name, Role (admin / management)
-- Uses an Edge Function to create the user (since client-side `signUp` can't assign roles server-side)
-- Each employee row has a role badge and actions: change role, remove access (set back to user)
-
-### `supabase/functions/create-employee/index.ts` (new Edge Function)
-- Accepts POST `{ email, password, fullName, role }` where role is "admin" or "management"
-- Uses `supabase.auth.admin.createUser()` with service role key to create the account (no email confirmation needed)
-- Inserts the role into `user_roles`
-- Only callable by existing admins (JWT validated, caller must have admin role)
-
-### `src/services/userService.ts`
-- Add `createEmployee(email, password, fullName, role)` -- invokes the `create-employee` edge function
-- Add `updateRole(userId, role)` -- updates `user_roles` table
-- Add `removeRole(userId)` -- deletes from `user_roles` (reverts to basic user)
-
-### `src/contexts/AuthContext.tsx`
-- Add `userRole` state (string: "admin" | "management" | "user") alongside `isAdmin`
-- Fetch actual role from `user_roles` table
-- Export `userRole` so the sidebar/UI can conditionally show/hide delete buttons
-
-### `src/components/AdminSidebar.tsx`
-- Show "Settings" link only for admin role (not management)
-- Show the actual role label (admin/management) under the user name
-
-### `src/pages/admin/AdminPackages.tsx`, `AdminBookings.tsx`, `AdminDestinations.tsx`, etc.
-- Hide delete buttons when `userRole === "management"` (they can still create and edit)
-
-### `supabase/config.toml`
-- Add `create-employee` function config with `verify_jwt = false` (validated in code)
+### Modified Files (10+)
+- `src/pages/admin/AdminLogin.tsx` -- role-aware redirect
+- `src/pages/auth/LoginPage.tsx` -- role-aware redirect
+- `src/contexts/AuthContext.tsx` -- signIn returns role
+- `src/pages/admin/AdminSettings.tsx` -- hero media + AI keys sections
+- `src/pages/HomePage.tsx` -- dynamic hero from DB
+- `src/App.tsx` -- new routes
+- `src/components/AdminSidebar.tsx` -- Gallery, Knowledge Base, CRM links
+- `src/components/PublicLayout.tsx` -- ChatWidget
+- `src/components/Navbar.tsx` -- Gallery nav link
+- `supabase/config.toml` -- ai-chat function
+- `src/services/bookingService.ts` -- CRM integration
+- `src/services/inquiryService.ts` -- CRM integration
 
 ---
 
 ## Technical Notes
 
-- The `app_role` enum currently has `admin`, `moderator`, `user`. We will use `management` instead of `moderator` (or reuse `moderator` if preferred -- using the new value is cleaner).
-- The Edge Function for employee creation uses `supabase.auth.admin.createUser()` which requires the service role key (already in secrets).
-- Management role grants read + create + edit access across the admin panel but blocks destructive actions (delete). Settings page is admin-only.
-- Destination images are uploaded to `destination-images` bucket with a unique filename (UUID-based) to avoid collisions.
-
+- AI API keys are stored in `site_settings` (not Supabase secrets) so admins can update them from the UI without needing Supabase dashboard access
+- The AI chat edge function reads the keys from DB at runtime
+- Gallery images are compressed client-side before upload (canvas resize to max 1920px width, JPEG quality 0.8) to keep files lightweight without quality loss
+- Videos are uploaded as-is (browser-side video compression is not practical) but limited to 50MB max
+- The chat widget uses non-streaming responses initially for simplicity; streaming can be added later
+- CRM auto-capture happens in the edge functions (chat, booking notification) using the service role key
