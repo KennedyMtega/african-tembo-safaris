@@ -12,11 +12,12 @@ const sideLinks = [
 ];
 
 export function CustomerLayout() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isStaff } = useAuth();
   const { pathname } = useLocation();
 
   if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="text-muted-foreground">Loading…</p></div>;
   if (!user) return <Navigate to="/login" replace />;
+  if (isStaff) return <Navigate to="/admin/dashboard" replace />;
 
   return (
     <div className="flex min-h-screen flex-col">

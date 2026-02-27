@@ -23,11 +23,11 @@ const breadcrumbMap: Record<string, string> = {
 };
 
 export function AdminLayout() {
-  const { isAdmin, isLoading } = useAuth();
+  const { isStaff, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="text-muted-foreground">Loading...</p></div>;
-  if (!isAdmin) return <Navigate to="/admin" replace />;
+  if (!isStaff) return <Navigate to="/admin" replace />;
 
   const pageTitle = breadcrumbMap[location.pathname] ?? "Admin";
 

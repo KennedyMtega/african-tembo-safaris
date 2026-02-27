@@ -63,17 +63,14 @@ export const userService = {
   async updateRole(userId: string, role: string): Promise<void> {
     const { error } = await supabase
       .from("user_roles")
-      .update({ role } as any)
-      .eq("user_id", userId);
+      .upsert({ user_id: userId, role } as any, { onConflict: "user_id" });
     if (error) throw error;
   },
 
   async removeRole(userId: string): Promise<void> {
-    // Set back to 'user' role
     const { error } = await supabase
       .from("user_roles")
-      .update({ role: "user" } as any)
-      .eq("user_id", userId);
+      .upsert({ user_id: userId, role: "user" } as any, { onConflict: "user_id" });
     if (error) throw error;
   },
 

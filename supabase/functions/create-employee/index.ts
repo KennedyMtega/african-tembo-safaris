@@ -112,12 +112,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // The handle_new_user trigger already inserts a 'user' role.
-    // Update that role to the requested one.
-    await serviceClient
+    // The handle_new_user trigger inserts a 'user' role.
+    // Upsert to the requested role (UNIQUE on user_id ensures one row).
+    const { error: roleError } = await serviceClient
       .from("user_roles")
-      .update({ role })
-      .eq("user_id", newUser.user.id);
+      .upsert(
+        { user_id: newUser.user.id, role },
+        { onConflict: "user_id" }
+      );
+    if (roleError) {
+      console.error("Role upsert error:", roleError);
+    }
 
     return new Response(
       JSON.stringify({ id: newUser.user.id, email, fullName, role }),
