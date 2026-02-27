@@ -21,12 +21,13 @@ export default function AdminLogin() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error, role } = await signIn(email, password);
     setLoading(false);
     if (error) setError(error);
-    else {
-      // Wait a beat for admin check
-      setTimeout(() => navigate("/admin/dashboard"), 500);
+    else if (role === "admin" || role === "management") {
+      navigate("/admin/dashboard", { replace: true });
+    } else {
+      setError("You do not have admin access.");
     }
   };
 

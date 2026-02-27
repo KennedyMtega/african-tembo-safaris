@@ -4,9 +4,10 @@ import { Search, Star, Shield, Users, MapPin, Clock, ChevronRight } from "lucide
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import heroImage from "@/assets/hero-safari.jpg";
+import heroImageFallback from "@/assets/hero-safari.jpg";
 import { packageService } from "@/services/packageService";
 import { destinationService } from "@/services/destinationService";
+import { siteSettingsService, type HeroMedia } from "@/services/siteSettingsService";
 import { useQuery } from "@tanstack/react-query";
 
 const fadeUp = {
@@ -22,12 +23,20 @@ function formatPrice(min: number, max: number): string {
 export default function HomePage() {
   const { data: featured = [] } = useQuery({ queryKey: ["packages-featured"], queryFn: () => packageService.getFeatured() });
   const { data: destinations = [] } = useQuery({ queryKey: ["destinations"], queryFn: () => destinationService.getAll() });
+  const { data: heroMedia } = useQuery({ queryKey: ["hero-media"], queryFn: () => siteSettingsService.get<HeroMedia>("hero_media") });
+
+  const showVideo = heroMedia?.mode === "video" && heroMedia.videoUrl;
+  const heroSrc = heroMedia?.imageUrl || heroImageFallback;
 
   return (
     <>
       {/* ===== HERO ===== */}
       <section className="relative flex min-h-[85vh] items-center justify-center overflow-hidden">
-        <img src={heroImage} alt="African savanna at golden hour" className="absolute inset-0 h-full w-full object-cover" />
+        {showVideo ? (
+          <video src={heroMedia!.videoUrl} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <img src={heroSrc} alt="African savanna at golden hour" className="absolute inset-0 h-full w-full object-cover" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/40 to-foreground/20" />
         <div className="container relative z-10 py-20 text-center text-primary-foreground">
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="mb-4 font-body text-sm uppercase tracking-[0.3em] text-primary-foreground/80">

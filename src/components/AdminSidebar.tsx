@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Package, CalendarCheck, Users, CreditCard, LogOut,
   BarChart3, MapPin, Star, MessageSquare, Activity, Settings, FileText,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, GalleryHorizontalEnd, BookOpen, Contact,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,8 +33,11 @@ const sections = [
     label: "Operations",
     links: [
       { to: "/admin/destinations", label: "Destinations", icon: MapPin },
+      { to: "/admin/gallery", label: "Gallery", icon: GalleryHorizontalEnd },
       { to: "/admin/reviews", label: "Reviews", icon: Star },
       { to: "/admin/inquiries", label: "Inquiries", icon: MessageSquare },
+      { to: "/admin/knowledge-base", label: "Knowledge Base", icon: BookOpen },
+      { to: "/admin/crm", label: "CRM", icon: Contact },
     ],
   },
   {

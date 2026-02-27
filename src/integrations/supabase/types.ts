@@ -132,6 +132,139 @@ export type Database = {
           },
         ]
       }
+      chat_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string | null
+          visitor_email: string | null
+          visitor_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id?: string | null
+          visitor_email?: string | null
+          visitor_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string | null
+          visitor_email?: string | null
+          visitor_name?: string | null
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_contacts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          last_interaction: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          source: string
+          status: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          last_interaction?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          last_interaction?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      crm_interactions: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          summary: string | null
+          type: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          summary?: string | null
+          type?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          summary?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_interactions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       destinations: {
         Row: {
           country: string
@@ -162,6 +295,36 @@ export type Database = {
           name?: string
           package_count?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      gallery_items: {
+        Row: {
+          created_at: string
+          id: string
+          sort_order: number
+          thumbnail_url: string | null
+          title: string | null
+          type: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sort_order?: number
+          thumbnail_url?: string | null
+          title?: string | null
+          type: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sort_order?: number
+          thumbnail_url?: string | null
+          title?: string | null
+          type?: string
+          url?: string
         }
         Relationships: []
       }
@@ -201,6 +364,36 @@ export type Database = {
           status?: Database["public"]["Enums"]["inquiry_status"]
           subject?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      knowledge_base: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          id: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -481,6 +674,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      site_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

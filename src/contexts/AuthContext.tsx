@@ -13,7 +13,7 @@ interface AuthContextType {
   userRole: UserRole;
   isLoading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null; role: UserRole }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
 }
@@ -97,9 +97,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+  const signIn = async (email: string, password: string): Promise<{ error: string | null; role: UserRole }> => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message, role: "user" };
+    // Fetch role immediately so callers can route
+    if (data.user) {
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .single();
+      const role = (roleData?.role as UserRole) || "user";
+      setUserRole(role);
+      fetchProfile(data.user.id);
+      return { error: null, role };
+    }
+    return { error: null, role: "user" };
   };
 
   const signOut = async () => {
