@@ -36,6 +36,10 @@ import AdminInquiries from "@/pages/admin/AdminInquiries";
 import AdminActivityLog from "@/pages/admin/AdminActivityLog";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminReports from "@/pages/admin/AdminReports";
+import AdminGallery from "@/pages/admin/AdminGallery";
+import AdminKnowledgeBase from "@/pages/admin/AdminKnowledgeBase";
+import AdminCRM from "@/pages/admin/AdminCRM";
+import GalleryPage from "@/pages/GalleryPage";
 import CustomerDashboard from "@/pages/customer/CustomerDashboard";
 import CustomerBookings from "@/pages/customer/CustomerBookings";
 import CustomerWishlist from "@/pages/customer/CustomerWishlist";
@@ -65,6 +69,7 @@ const App = () => (
               <Route path="/faq" element={<FaqPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/gallery" element={<GalleryPage />} />
             </Route>
 
             {/* Auth */}
@@ -98,6 +103,9 @@ const App = () => (
               <Route path="/admin/activity" element={<AdminActivityLog />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
               <Route path="/admin/reports" element={<AdminReports />} />
+              <Route path="/admin/gallery" element={<AdminGallery />} />
+              <Route path="/admin/knowledge-base" element={<AdminKnowledgeBase />} />
+              <Route path="/admin/crm" element={<AdminCRM />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
