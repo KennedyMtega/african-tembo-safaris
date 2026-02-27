@@ -3,13 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 import type { Profile } from "@/types";
 
-type UserRole = "admin" | "management" | "user";
+export type UserRole = "admin" | "management" | "user";
 
 interface AuthContextType {
   user: SupabaseUser | null;
   profile: Profile | null;
   session: Session | null;
   isAdmin: boolean;
+  isStaff: boolean;
   userRole: UserRole;
   isLoading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const isAdmin = userRole === "admin";
+  const isStaff = userRole === "admin" || userRole === "management";
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
@@ -43,14 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const fetchRole = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .single();
-    if (data) {
-      setUserRole(data.role as UserRole);
+  const fetchRole = async (_userId?: string) => {
+    const { data, error } = await supabase.rpc("get_my_role");
+    if (!error && data) {
+      setUserRole(data as UserRole);
     } else {
       setUserRole("user");
     }
@@ -131,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, session, isAdmin, userRole, isLoading, signUp, signIn, signOut, resetPassword }}>
+    <AuthContext.Provider value={{ user, profile, session, isAdmin, isStaff, userRole, isLoading, signUp, signIn, signOut, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

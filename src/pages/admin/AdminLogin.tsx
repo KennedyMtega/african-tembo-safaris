@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import temboLogo from "@/assets/tembo-logo.jpg";
 
 export default function AdminLogin() {
-  const { signIn, isAdmin, isLoading } = useAuth();
+  const { signIn, isStaff, isLoading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!isLoading && isAdmin) { navigate("/admin/dashboard", { replace: true }); return null; }
+  // Redirect if already staff — in useEffect, not render
+  useEffect(() => {
+    if (!isLoading && isStaff) {
+      navigate("/admin/dashboard", { replace: true });
+    }
+  }, [isLoading, isStaff, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +35,9 @@ export default function AdminLogin() {
       setError("You do not have admin access.");
     }
   };
+
+  // Don't render login form if already staff
+  if (!isLoading && isStaff) return null;
 
   return (
     <section className="flex min-h-screen items-center justify-center bg-background p-4">
