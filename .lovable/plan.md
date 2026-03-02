@@ -1,25 +1,28 @@
 
-# Fix Navbar: Reduce Header Clutter
+
+# Fix Button Contrast Issue in Hero Section
 
 ## Problem
-The desktop navbar is too wide with 7 nav links + notification bell + user account dropdown + "Book Now" button, causing overflow on medium screens.
+The "Plan My Trip" button in the hero section uses `border-primary-foreground/30` (30% opacity border) and no visible background, making it nearly invisible against the dark overlay until the user hovers over it.
 
 ## Solution
-1. **Remove the standalone "Book Now" button** -- it duplicates the "Packages" link. Instead, make the "Packages" link text say "Book Safari" so it serves both purposes with a clear CTA feel.
-2. **Move "FAQ" out of the main nav** -- FAQ is a support page better accessed from the footer (where it already exists). This drops the nav from 7 items to 6.
-3. **Tighten nav link padding** -- reduce horizontal padding from `px-3` to `px-2.5` for a slightly more compact feel.
-4. **Keep mobile menu unchanged** -- the mobile hamburger menu will retain all links including FAQ and Book Now since space isn't an issue there.
-
-### Result
-Desktop nav goes from: `Home | Packages | Destinations | Gallery | About | Contact | FAQ [bell] [avatar] [Book Now]`
-To: `Home | Book Safari | Destinations | Gallery | About | Contact [bell] [avatar]`
-
-This removes 2 items from the right side and keeps the header clean and professional.
+Increase the border opacity and add a subtle semi-transparent background so the button is clearly visible at rest, not just on hover.
 
 ## Technical Changes
 
-**File: `src/components/Navbar.tsx`**
-- Remove "FAQ" from the `navLinks` array (keep it in mobile menu only)
-- Rename "Packages" label to "Book Safari" for CTA intent
-- Remove the `<Button asChild className="hidden md:inline-flex">Book Now</Button>` block
-- Slightly reduce nav link padding
+**File: `src/pages/HomePage.tsx` (line 55)**
+
+Change the "Plan My Trip" button classes from:
+```
+border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10
+```
+To:
+```
+border-primary-foreground/70 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20
+```
+
+This gives the button:
+- A clearly visible border (70% opacity instead of 30%)
+- A subtle frosted background at rest (10% opacity fill)
+- A slightly stronger background on hover (20%)
+- Consistent contrast with the "Explore Safaris" button next to it
