@@ -183,7 +183,7 @@ export default function HomePage() {
             <Button asChild size="lg" variant="secondary">
               <Link to="/packages">Browse Packages</Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
+            <Button asChild size="lg" variant="outline" className="border-primary-foreground/70 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20">
               <Link to="/contact">Contact Us</Link>
             </Button>
           </div>
