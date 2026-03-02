@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
 import { siteSettingsService, type HeroMedia } from "@/services/siteSettingsService";
 import { compressImage } from "@/lib/compressImage";
-import { Settings, Save, Users, Plus, Shield, ShieldCheck, UserMinus, Image, Video, Bot, Eye, EyeOff } from "lucide-react";
+import { Settings, Save, Users, Plus, Shield, ShieldCheck, UserMinus, Image, Video, Bot, Eye, EyeOff, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -52,6 +52,18 @@ export default function AdminSettings() {
   const [showGemini, setShowGemini] = useState(false);
   const [aiSaving, setAiSaving] = useState(false);
 
+  // Social media state
+  const [socialLinks, setSocialLinks] = useState({
+    facebook: "",
+    instagram: "",
+    twitter: "",
+    youtube: "",
+    tiktok: "",
+    linkedin: "",
+    whatsapp: "",
+  });
+  const [socialSaving, setSocialSaving] = useState(false);
+
   // Load hero media and AI config from site_settings
   useEffect(() => {
     siteSettingsService.get<HeroMedia>("hero_media").then((val) => {
@@ -69,6 +81,9 @@ export default function AdminSettings() {
     });
     siteSettingsService.get<{ provider: string }>("ai_provider").then((val) => {
       if (val?.provider) setAiProvider(val.provider as "claude" | "gemini");
+    });
+    siteSettingsService.get<typeof socialLinks>("social_links").then((val) => {
+      if (val) setSocialLinks((prev) => ({ ...prev, ...val }));
     });
   }, []);
 
@@ -411,6 +426,52 @@ export default function AdminSettings() {
             }}
           >
             <Save className="mr-1 h-4 w-4" /> {aiSaving ? "Saving…" : "Save AI Settings"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Social Media Links */}
+      <Card className="border-border/50">
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Share2 className="h-4 w-4" /> Social Media Links</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">These links appear in the website footer. Leave blank to hide a platform.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[
+              { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/africantembo" },
+              { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/africantembo" },
+              { key: "twitter", label: "X (Twitter)", placeholder: "https://x.com/africantembo" },
+              { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/@africantembo" },
+              { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@africantembo" },
+              { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/company/africantembo" },
+              { key: "whatsapp", label: "WhatsApp", placeholder: "https://wa.me/255123456789" },
+            ].map((s) => (
+              <div key={s.key}>
+                <Label>{s.label}</Label>
+                <Input
+                  value={socialLinks[s.key as keyof typeof socialLinks]}
+                  onChange={(e) => setSocialLinks((prev) => ({ ...prev, [s.key]: e.target.value }))}
+                  placeholder={s.placeholder}
+                  className="mt-1"
+                />
+              </div>
+            ))}
+          </div>
+          <Button
+            size="sm"
+            disabled={socialSaving}
+            onClick={async () => {
+              setSocialSaving(true);
+              try {
+                await siteSettingsService.set("social_links", socialLinks);
+                toast({ title: "Social media links saved" });
+              } catch (err: any) {
+                toast({ title: "Error", description: err.message, variant: "destructive" });
+              } finally {
+                setSocialSaving(false);
+              }
+            }}
+          >
+            <Save className="mr-1 h-4 w-4" /> {socialSaving ? "Saving…" : "Save Social Links"}
           </Button>
         </CardContent>
       </Card>

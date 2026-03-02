@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Star, Shield, Users, MapPin, Clock, ChevronRight } from "lucide-react";
+import { Search, Star, Shield, Users, MapPin, Clock, ChevronRight, Footprints, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,18 +35,18 @@ export default function HomePage() {
         {showVideo ? (
           <video src={heroMedia!.videoUrl} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
         ) : (
-          <img src={heroSrc} alt="African savanna at golden hour" className="absolute inset-0 h-full w-full object-cover" />
+          <img src={heroSrc} alt="African savanna at golden hour with elephants" className="absolute inset-0 h-full w-full object-cover" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/40 to-foreground/20" />
         <div className="container relative z-10 py-20 text-center text-primary-foreground">
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="mb-4 font-body text-sm uppercase tracking-[0.3em] text-primary-foreground/80">
-            Authentic African Adventures
+            The Wild Is Waiting for You
           </motion.p>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }} className="mx-auto max-w-3xl font-display text-4xl font-bold leading-tight md:text-6xl lg:text-7xl">
-            Discover the Wild <br />Beauty of Africa
+            Feel the Heartbeat <br />of Africa
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }} className="mx-auto mt-6 max-w-xl text-lg text-primary-foreground/80">
-            Expert-guided safari experiences across Tanzania, Kenya &amp; South Africa. Create memories that last a lifetime.
+            Expert-led, ethical safari experiences through the heart of Tanzania. From the sweeping Serengeti to the ancient Ngorongoro Crater — carry a piece of Africa's soul with you.
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }} className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Button asChild size="lg" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
@@ -56,6 +56,35 @@ export default function HomePage() {
               <Link to="/contact">Plan My Trip</Link>
             </Button>
           </motion.div>
+        </div>
+      </section>
+
+      {/* ===== TEMBO PHILOSOPHY ===== */}
+      <section className="bg-secondary/50 py-16 md:py-24">
+        <div className="container">
+          <div className="mb-10 text-center">
+            <p className="text-sm font-semibold uppercase tracking-wider text-primary">The Tembo Philosophy</p>
+            <h2 className="mt-2 font-display text-3xl font-bold text-foreground md:text-4xl">Why Journey With Us</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+              "Tembo" means elephant in Swahili — a symbol of wisdom, family, and an unbreakable bond with the land. Just as the elephant creates paths for others to follow, we pioneer authentic travel across the African continent.
+            </p>
+          </div>
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: Shield, title: "Unrivaled Expertise", desc: "Our guides are naturalists and storytellers who bring the wilderness to life with every track and every call." },
+              { icon: Users, title: "Deep Connection", desc: "We introduce you to the heartbeat of Africa — local cultures, hidden trails, and stories that don't make it into guidebooks." },
+              { icon: Footprints, title: "A Gentle Footprint", desc: "Sustainable tourism isn't a buzzword — it's our commitment to keeping these landscapes pristine for generations." },
+              { icon: Eye, title: "Wildlife First", desc: "Ethical viewing practices always. We observe, we admire, but we never disturb. We are guests in their home." },
+            ].map((item, i) => (
+              <motion.div key={item.title} custom={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                  <item.icon className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-display text-lg font-semibold text-foreground">{item.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -103,32 +132,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ===== WHY CHOOSE US ===== */}
-      <section className="bg-secondary/50 py-16 md:py-24">
-        <div className="container">
-          <div className="mb-10 text-center">
-            <p className="text-sm font-semibold uppercase tracking-wider text-primary">Why Tembo Safari</p>
-            <h2 className="mt-2 font-display text-3xl font-bold text-foreground md:text-4xl">Experience the Difference</h2>
-          </div>
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: Shield, title: "Expert Guides", desc: "Certified, local guides with decades of bush experience and deep wildlife knowledge." },
-              { icon: Users, title: "Small Groups", desc: "Intimate group sizes ensure personalized attention and minimal environmental impact." },
-              { icon: MapPin, title: "Prime Locations", desc: "Access to the best wildlife hotspots across East and Southern Africa." },
-              { icon: Star, title: "5-Star Service", desc: "Premium lodges, gourmet dining, and seamless logistics from start to finish." },
-            ].map((item, i) => (
-              <motion.div key={item.title} custom={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                  <item.icon className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-display text-lg font-semibold text-foreground">{item.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ===== DESTINATIONS ===== */}
       {destinations.length > 0 && (
         <section className="bg-background py-16 md:py-24">
@@ -155,12 +158,26 @@ export default function HomePage() {
         </section>
       )}
 
+      {/* ===== CEO QUOTE ===== */}
+      <section className="bg-secondary/30 py-16 md:py-24">
+        <div className="container max-w-3xl text-center">
+          <motion.blockquote initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="space-y-4">
+            <p className="font-display text-xl italic leading-relaxed text-foreground md:text-2xl">
+              "From the moment you step off the plane in Arusha to the final sunset over the Serengeti, my team and I are dedicated to your safety, your comfort, and your inspiration."
+            </p>
+            <footer className="text-sm text-muted-foreground">
+              <strong className="text-foreground">Mohamedi Shabani Mgomi</strong> — Founder &amp; CEO, African Tembo Safari
+            </footer>
+          </motion.blockquote>
+        </div>
+      </section>
+
       {/* ===== CTA ===== */}
       <section className="relative overflow-hidden bg-primary py-16 md:py-24">
         <div className="container relative z-10 text-center">
           <h2 className="font-display text-3xl font-bold text-primary-foreground md:text-4xl">Ready for Your African Adventure?</h2>
           <p className="mx-auto mt-4 max-w-lg text-primary-foreground/80">
-            Let our experts craft the perfect safari itinerary for you. Contact us today to start planning.
+            When you choose African Tembo Safaris, you aren't just booking a tour — you're joining a herd. Let our experts craft the perfect itinerary for you.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Button asChild size="lg" variant="secondary">
