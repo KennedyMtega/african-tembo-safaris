@@ -52,7 +52,7 @@ export default function HomePage() {
             <Button asChild size="lg" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
               <Link to="/packages"><Search className="h-4 w-4" /> Explore Safaris</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
+            <Button asChild variant="outline" size="lg" className="border-primary-foreground/70 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20">
               <Link to="/contact">Plan My Trip</Link>
             </Button>
           </motion.div>
