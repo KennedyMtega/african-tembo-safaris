@@ -11,11 +11,14 @@ import temboLogo from "@/assets/tembo-logo.jpg";
 
 const navLinks = [
   { label: "Home", to: "/" },
-  { label: "Packages", to: "/packages" },
+  { label: "Book Safari", to: "/packages" },
   { label: "Destinations", to: "/destinations" },
   { label: "Gallery", to: "/gallery" },
   { label: "About", to: "/about" },
   { label: "Contact", to: "/contact" },
+];
+
+const mobileOnlyLinks = [
   { label: "FAQ", to: "/faq" },
 ];
 
@@ -91,7 +94,7 @@ export function Navbar() {
             <Link
               key={link.to}
               to={link.to}
-              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-primary/10 hover:text-primary ${
+              className={`rounded-md px-2.5 py-2 text-sm font-medium transition-colors hover:bg-primary/10 hover:text-primary ${
                 pathname === link.to ? "text-primary" : "text-muted-foreground"
               }`}
             >
@@ -123,9 +126,6 @@ export function Navbar() {
               <Button asChild size="sm"><Link to="/signup">Sign Up</Link></Button>
             </div>
           )}
-          <Button asChild className="hidden md:inline-flex">
-            <Link to="/packages">Book Now</Link>
-          </Button>
           <button
             className="inline-flex h-10 w-10 items-center justify-center rounded-md text-foreground md:hidden"
             onClick={() => setOpen(!open)}
@@ -139,7 +139,7 @@ export function Navbar() {
       {open && (
         <div className="border-t border-border md:hidden">
           <nav className="container flex flex-col gap-1 py-4">
-            {navLinks.map((link) => (
+            {[...navLinks, ...mobileOnlyLinks].map((link) => (
               <Link key={link.to} to={link.to} onClick={() => setOpen(false)}
                 className={`rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-primary/10 ${pathname === link.to ? "text-primary" : "text-muted-foreground"}`}>
                 {link.label}
