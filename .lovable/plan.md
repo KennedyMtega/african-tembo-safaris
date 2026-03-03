@@ -1,60 +1,98 @@
 
 
-# Knowledge Base Upgrade: Better UI + AI Assistant Integration
+# Settings Restructure, Gallery AI Images, and KB Document Upload
 
 ## Overview
-Transform the Knowledge Base admin page from a basic dialog-based form into a rich, full-featured content management experience with an integrated AI writing assistant that helps admins create, improve, and auto-generate knowledge base articles.
+Four main changes: (1) Split the Settings page into tabbed sub-sections, (2) Generate AI images for the gallery, (3) Add document upload to the Knowledge Base AI assistant.
 
-## What Changes
+---
 
-### 1. Redesigned Article Editor (Full-Page Panel)
-Replace the small cramped dialog with a proper side-by-side layout:
-- **Left panel**: Article list with search, filters by category, and article cards
-- **Right panel**: Full article editor that slides in when creating/editing, with proper spacing, a rich content area, live preview, and category/tag pickers
-- Add a confirmation dialog before deleting articles
-- Show article stats (word count, last updated, category)
+## 1. Settings Page — Tabbed Layout
 
-### 2. AI Writing Assistant Panel
-Add an AI-powered assistant built into the KB editor that helps admins:
-- **"Generate Article"** - Type a topic/prompt and the AI generates a full KB article (title, content, category, tags)
-- **"Improve Content"** - Select existing content and the AI rewrites/expands it
-- **"Suggest Topics"** - AI analyzes existing KB articles and suggests missing topics the business should cover (e.g., "You don't have articles about visa requirements" or "Consider adding cancellation policy info")
-- The assistant appears as an inline chat/toolbar within the editor
+**File: `src/pages/admin/AdminSettings.tsx`**
 
-### 3. New Edge Function: `kb-assistant`
-A dedicated edge function that handles KB-specific AI tasks:
-- Uses the same AI provider config (Claude/Gemini keys from `site_settings`) as the existing `ai-chat` function
-- Accepts an `action` parameter: `generate`, `improve`, or `suggest`
-- For `generate`: takes a topic prompt, returns structured article data
-- For `improve`: takes existing content, returns enhanced version
-- For `suggest`: fetches all existing KB articles and identifies gaps, returning topic suggestions
-- The AI can also directly save articles to the `knowledge_base` table (via the edge function with service role key)
+Replace the single scrolling page with a horizontal tab navigation at the top. Each section gets its own tab:
 
-### 4. Config & Infrastructure
-- Add `[functions.kb-assistant]` with `verify_jwt = false` to `supabase/config.toml`
-- No new database tables needed -- uses existing `knowledge_base` table and `site_settings` for AI keys
+- **Company Profile** — Company name, email, phone, address, system (currency/timezone), notifications
+- **Team Management** — Employee list, invite dialog, role management
+- **Hero Section** — Hero media mode toggle, image/video upload, save (keep all existing upload functionality intact)
+- **AI Configuration** — Provider selection, API keys
+- **Social Media** — Social links form
 
-## Technical Details
+Each tab renders only its own content, eliminating the endless scroll. All existing state and logic remains the same, just reorganized into `TabsContent` blocks using the existing Radix Tabs component.
 
-### Files to Create
-- **`supabase/functions/kb-assistant/index.ts`** - Edge function with three action modes (generate, improve, suggest). Reads AI keys from `site_settings`, calls Claude/Gemini, and optionally inserts articles directly into `knowledge_base`.
+---
 
-### Files to Modify
-- **`src/pages/admin/AdminKnowledgeBase.tsx`** - Complete rewrite with:
-  - Two-column responsive layout (article list + editor/AI panel)
-  - Tabbed interface in editor: "Write" and "AI Assistant"
-  - AI Assistant tab with action buttons (Generate, Improve, Suggest Topics)
-  - Category filter chips above article list
-  - Delete confirmation with AlertDialog
-  - Better card design with timestamps and word counts
-- **`supabase/config.toml`** - Add `kb-assistant` function entry
+## 2. Gallery — AI-Generated Images
 
-### AI Assistant UX Flow
-1. Admin clicks "Add Article" -- right panel opens with editor
-2. Admin can either write manually OR switch to "AI Assistant" tab
-3. In AI tab, admin types "Write an article about our cancellation policy" and clicks Generate
-4. AI returns structured content that auto-fills the title, content, category, and tags fields
-5. Admin reviews, tweaks if needed, and clicks Save
-6. "Suggest Topics" button shows a list of recommended articles to add based on what's missing
-7. "Improve" button takes current content and returns an enhanced version
+**File: `src/pages/admin/AdminGallery.tsx`**
+
+Add a "Generate with AI" section alongside the existing upload form:
+- Text prompt input (e.g., "African elephant at sunset in the Serengeti")
+- "Generate" button that calls a new edge function
+- Shows 3 generated image previews the admin can select from
+- Selected images get uploaded to the `site-media` bucket and saved to `gallery_items` table
+- Existing manual upload remains untouched
+
+**File: `supabase/functions/generate-gallery-image/index.ts`** (new)
+
+Edge function that:
+- Takes a prompt string
+- Calls Lovable AI Gateway with `google/gemini-2.5-flash-image` model and `modalities: ["image", "text"]`
+- Returns base64 image data
+- Called 3 times (or 3 prompts with variations) to produce 3 options
+- The frontend uploads the selected base64 image to Supabase storage
+
+**File: `supabase/config.toml`** — Add `[functions.generate-gallery-image]` with `verify_jwt = false`
+
+The gallery items are already visible on the public `/gallery` page via `galleryService.getAll()` with the existing `Public read gallery` RLS policy, so no changes needed there.
+
+---
+
+## 3. Hero Section — Design Presets
+
+Within the Hero Section tab in settings, add a "Generate Hero Designs" feature:
+- Button to generate 3 AI hero images with safari-themed prompts
+- Shows 3 preview cards the admin can click to select
+- Selecting one sets it as `heroImageUrl` (same flow as current upload)
+- The existing upload functionality (image and video) remains fully intact alongside this
+
+Uses the same `generate-gallery-image` edge function with different prompts.
+
+---
+
+## 4. Knowledge Base — Document Upload + AI Processing
+
+**File: `src/pages/admin/AdminKnowledgeBase.tsx`**
+
+Add a new section in the AI Assistant tab:
+- **"Upload Document"** card with a file input (accepts `.txt`, `.md`, `.pdf`, `.docx`)
+- On upload, reads the file content client-side (for text files via FileReader; for PDF/DOCX, extracts text client-side or sends raw to edge function)
+- Sends the extracted text to the existing `kb-assistant` edge function with action `"generate"` and the document content as the prompt
+- AI processes the document, structures it into a proper KB article (title, content, category, tags)
+- Auto-fills the editor form fields
+- Admin reviews and clicks Save
+
+**File: `supabase/functions/kb-assistant/index.ts`**
+
+Add a new action `"from_document"`:
+- Receives raw document text
+- System prompt instructs AI to extract key information, organize it into a well-structured KB article
+- Improve and clean up content only when necessary (as requested)
+- Returns structured article data via the same `save_article` tool call pattern
+
+---
+
+## Technical Summary
+
+| File | Action |
+|------|--------|
+| `src/pages/admin/AdminSettings.tsx` | Restructure into 5 tabs |
+| `src/pages/admin/AdminGallery.tsx` | Add AI image generation UI |
+| `src/pages/admin/AdminKnowledgeBase.tsx` | Add document upload in AI tab |
+| `supabase/functions/generate-gallery-image/index.ts` | New — AI image generation |
+| `supabase/functions/kb-assistant/index.ts` | Add `from_document` action |
+| `supabase/config.toml` | Add new function entry |
+
+No database changes needed — all existing tables and RLS policies support these features.
 
