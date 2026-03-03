@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.kb-assistant]
 verify_jwt = false
+
+[functions.generate-gallery-image]
+verify_jwt = false

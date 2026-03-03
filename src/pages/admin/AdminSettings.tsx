@@ -9,12 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { CompanySettings } from "@/types/admin";
 import { useToast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
 import { siteSettingsService, type HeroMedia } from "@/services/siteSettingsService";
 import { compressImage } from "@/lib/compressImage";
-import { Settings, Save, Users, Plus, Shield, ShieldCheck, UserMinus, Image, Video, Bot, Eye, EyeOff, Share2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Settings, Save, Users, Plus, Shield, ShieldCheck, UserMinus, Image, Video, Bot, Eye, EyeOff, Share2, Building2, Sparkles, Loader2, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -44,6 +46,10 @@ export default function AdminSettings() {
   const [heroVideoUrl, setHeroVideoUrl] = useState("");
   const [heroUploading, setHeroUploading] = useState(false);
 
+  // Hero AI generation state
+  const [heroGenerating, setHeroGenerating] = useState(false);
+  const [heroDesigns, setHeroDesigns] = useState<string[]>([]);
+
   // AI config state
   const [claudeKey, setClaudeKey] = useState("");
   const [geminiKey, setGeminiKey] = useState("");
@@ -64,7 +70,6 @@ export default function AdminSettings() {
   });
   const [socialSaving, setSocialSaving] = useState(false);
 
-  // Load hero media and AI config from site_settings
   useEffect(() => {
     siteSettingsService.get<HeroMedia>("hero_media").then((val) => {
       if (val) {
@@ -141,6 +146,52 @@ export default function AdminSettings() {
     }
   };
 
+  const handleGenerateHeroDesigns = async () => {
+    setHeroGenerating(true);
+    setHeroDesigns([]);
+    try {
+      const prompts = [
+        "A breathtaking wide-angle landscape photo of the African savanna at golden hour with acacia trees silhouetted against an orange sunset sky, safari vehicle in the distance, professional photography",
+        "A stunning aerial view of a vast African wilderness with herds of elephants walking through lush green plains, dramatic clouds and golden light, cinematic safari photography",
+        "A majestic African landscape at dawn with Mount Kilimanjaro in the background, a hot air balloon floating over the Serengeti plains, warm colors, professional travel photography",
+      ];
+      const results: string[] = [];
+      for (const prompt of prompts) {
+        const { data, error } = await supabase.functions.invoke("generate-gallery-image", {
+          body: { prompt },
+        });
+        if (error) throw error;
+        if (data?.image) results.push(data.image);
+      }
+      setHeroDesigns(results);
+      if (results.length > 0) toast({ title: `Generated ${results.length} hero designs` });
+    } catch (err: any) {
+      toast({ title: "Generation failed", description: err.message, variant: "destructive" });
+    } finally {
+      setHeroGenerating(false);
+    }
+  };
+
+  const selectHeroDesign = async (base64: string) => {
+    setHeroUploading(true);
+    try {
+      const byteString = atob(base64.split(",")[1] || base64);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+      const blob = new Blob([ab], { type: "image/png" });
+      const file = new File([blob], `hero-ai-${Date.now()}.png`, { type: "image/png" });
+      const url = await siteSettingsService.uploadMedia(file, `hero/ai-${Date.now()}.png`);
+      setHeroImageUrl(url);
+      setHeroDesigns([]);
+      toast({ title: "Hero image set! Don't forget to save." });
+    } catch (err: any) {
+      toast({ title: "Error setting image", description: err.message, variant: "destructive" });
+    } finally {
+      setHeroUploading(false);
+    }
+  };
+
   return (
     <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="flex items-center gap-2">
@@ -148,335 +199,412 @@ export default function AdminSettings() {
         <span className="font-display text-lg font-semibold text-foreground">Settings</span>
       </div>
 
-      {/* Team Management */}
-      <Card className="border-border/50">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="h-4 w-4" /> Team Management
-          </CardTitle>
-          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Invite Employee</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Invite Employee</DialogTitle></DialogHeader>
-              <form onSubmit={handleInvite} className="space-y-4">
-                <div><Label>Full Name</Label><Input name="fullName" required /></div>
-                <div><Label>Email</Label><Input name="email" type="email" required /></div>
-                <div><Label>Password</Label><Input name="password" type="password" required minLength={8} /></div>
-                <div>
-                  <Label>Role</Label>
-                  <select name="role" defaultValue="management" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <option value="admin">Admin — Full access</option>
-                    <option value="management">Management — Edit & create only</option>
-                  </select>
+      <Tabs defaultValue="company" className="w-full">
+        <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="company" className="gap-1.5 text-xs">
+            <Building2 className="h-3.5 w-3.5" /> Company Profile
+          </TabsTrigger>
+          <TabsTrigger value="team" className="gap-1.5 text-xs">
+            <Users className="h-3.5 w-3.5" /> Team Management
+          </TabsTrigger>
+          <TabsTrigger value="hero" className="gap-1.5 text-xs">
+            <Image className="h-3.5 w-3.5" /> Hero Section
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-1.5 text-xs">
+            <Bot className="h-3.5 w-3.5" /> AI Configuration
+          </TabsTrigger>
+          <TabsTrigger value="social" className="gap-1.5 text-xs">
+            <Share2 className="h-3.5 w-3.5" /> Social Media
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Company Profile Tab */}
+        <TabsContent value="company" className="mt-6 space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="border-border/50">
+              <CardHeader><CardTitle className="text-base">Company Profile</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div><Label>Company Name</Label><Input value={settings.name} onChange={(e) => update("name", e.target.value)} /></div>
+                <div><Label>Email</Label><Input value={settings.email} onChange={(e) => update("email", e.target.value)} /></div>
+                <div><Label>Phone</Label><Input value={settings.phone} onChange={(e) => update("phone", e.target.value)} /></div>
+                <div><Label>Address</Label><Input value={settings.address} onChange={(e) => update("address", e.target.value)} /></div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50">
+              <CardHeader><CardTitle className="text-base">System</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div><Label>Currency</Label>
+                  <Select value={settings.currency} onValueChange={(v) => update("currency", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD ($)</SelectItem>
+                      <SelectItem value="EUR">EUR (€)</SelectItem>
+                      <SelectItem value="GBP">GBP (£)</SelectItem>
+                      <SelectItem value="TZS">TZS</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button type="submit" className="w-full" disabled={inviting}>
-                  {inviting ? "Creating…" : "Create Employee"}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-          {loadingEmployees ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">Loading team…</p>
-          ) : employees.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">No team members yet</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {employees.map((emp) => (
-                  <TableRow key={emp.id}>
-                    <TableCell className="font-medium">{emp.fullName || "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{emp.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={emp.role === "admin" ? "default" : "secondary"} className="gap-1">
-                        {emp.role === "admin" ? <ShieldCheck className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-                        {emp.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => handleChangeRole(emp.id, emp.role === "admin" ? "management" : "admin")}
-                      >
-                        Switch to {emp.role === "admin" ? "Management" : "Admin"}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-xs text-destructive"
-                        onClick={() => handleRemoveAccess(emp.id)}
-                      >
-                        <UserMinus className="h-3 w-3 mr-1" /> Revoke
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                <div><Label>Timezone</Label>
+                  <Select value={settings.timezone} onValueChange={(v) => update("timezone", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Africa/Dar_es_Salaam">East Africa Time</SelectItem>
+                      <SelectItem value="UTC">UTC</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="border-border/50">
-          <CardHeader><CardTitle className="text-base">Company Profile</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div><Label>Company Name</Label><Input value={settings.name} onChange={(e) => update("name", e.target.value)} /></div>
-            <div><Label>Email</Label><Input value={settings.email} onChange={(e) => update("email", e.target.value)} /></div>
-            <div><Label>Phone</Label><Input value={settings.phone} onChange={(e) => update("phone", e.target.value)} /></div>
-            <div><Label>Address</Label><Input value={settings.address} onChange={(e) => update("address", e.target.value)} /></div>
-          </CardContent>
-        </Card>
+            <Card className="border-border/50 lg:col-span-2">
+              <CardHeader><CardTitle className="text-base">Notifications</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div><Label>New Booking Notifications</Label><p className="text-xs text-muted-foreground">Receive alerts for new bookings</p></div>
+                  <Switch checked={settings.notifyOnBooking} onCheckedChange={(v) => update("notifyOnBooking", v)} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div><Label>Payment Notifications</Label><p className="text-xs text-muted-foreground">Receive alerts for payments</p></div>
+                  <Switch checked={settings.notifyOnPayment} onCheckedChange={(v) => update("notifyOnPayment", v)} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div><Label>Inquiry Notifications</Label><p className="text-xs text-muted-foreground">Receive alerts for new inquiries</p></div>
+                  <Switch checked={settings.notifyOnInquiry} onCheckedChange={(v) => update("notifyOnInquiry", v)} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <Button className="gap-2" onClick={handleSave}><Save className="h-4 w-4" /> Save Settings</Button>
+        </TabsContent>
 
-        <Card className="border-border/50">
-          <CardHeader><CardTitle className="text-base">System</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div><Label>Currency</Label>
-              <Select value={settings.currency} onValueChange={(v) => update("currency", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="EUR">EUR (€)</SelectItem>
-                  <SelectItem value="GBP">GBP (£)</SelectItem>
-                  <SelectItem value="TZS">TZS</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Timezone</Label>
-              <Select value={settings.timezone} onValueChange={(v) => update("timezone", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Africa/Dar_es_Salaam">East Africa Time</SelectItem>
-                  <SelectItem value="UTC">UTC</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Team Management Tab */}
+        <TabsContent value="team" className="mt-6">
+          <Card className="border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Users className="h-4 w-4" /> Team Management
+              </CardTitle>
+              <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Invite Employee</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>Invite Employee</DialogTitle></DialogHeader>
+                  <form onSubmit={handleInvite} className="space-y-4">
+                    <div><Label>Full Name</Label><Input name="fullName" required /></div>
+                    <div><Label>Email</Label><Input name="email" type="email" required /></div>
+                    <div><Label>Password</Label><Input name="password" type="password" required minLength={8} /></div>
+                    <div>
+                      <Label>Role</Label>
+                      <select name="role" defaultValue="management" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <option value="admin">Admin — Full access</option>
+                        <option value="management">Management — Edit & create only</option>
+                      </select>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={inviting}>
+                      {inviting ? "Creating…" : "Create Employee"}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {loadingEmployees ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">Loading team…</p>
+              ) : employees.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">No team members yet</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {employees.map((emp) => (
+                      <TableRow key={emp.id}>
+                        <TableCell className="font-medium">{emp.fullName || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{emp.email}</TableCell>
+                        <TableCell>
+                          <Badge variant={emp.role === "admin" ? "default" : "secondary"} className="gap-1">
+                            {emp.role === "admin" ? <ShieldCheck className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
+                            {emp.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => handleChangeRole(emp.id, emp.role === "admin" ? "management" : "admin")}
+                          >
+                            Switch to {emp.role === "admin" ? "Management" : "Admin"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-destructive"
+                            onClick={() => handleRemoveAccess(emp.id)}
+                          >
+                            <UserMinus className="h-3 w-3 mr-1" /> Revoke
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Card className="border-border/50 lg:col-span-2">
-          <CardHeader><CardTitle className="text-base">Notifications</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div><Label>New Booking Notifications</Label><p className="text-xs text-muted-foreground">Receive alerts for new bookings</p></div>
-              <Switch checked={settings.notifyOnBooking} onCheckedChange={(v) => update("notifyOnBooking", v)} />
-            </div>
-            <div className="flex items-center justify-between">
-              <div><Label>Payment Notifications</Label><p className="text-xs text-muted-foreground">Receive alerts for payments</p></div>
-              <Switch checked={settings.notifyOnPayment} onCheckedChange={(v) => update("notifyOnPayment", v)} />
-            </div>
-            <div className="flex items-center justify-between">
-              <div><Label>Inquiry Notifications</Label><p className="text-xs text-muted-foreground">Receive alerts for new inquiries</p></div>
-              <Switch checked={settings.notifyOnInquiry} onCheckedChange={(v) => update("notifyOnInquiry", v)} />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Hero Media Management */}
-      <Card className="border-border/50">
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Image className="h-4 w-4" /> Hero Section Media</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Display Mode</Label>
-            <RadioGroup value={heroMode} onValueChange={(v) => setHeroMode(v as "image" | "video")} className="flex gap-4 mt-1">
-              <div className="flex items-center gap-2"><RadioGroupItem value="image" id="hero-img" /><Label htmlFor="hero-img">Image</Label></div>
-              <div className="flex items-center gap-2"><RadioGroupItem value="video" id="hero-vid" /><Label htmlFor="hero-vid">Video</Label></div>
-            </RadioGroup>
-          </div>
-          <div>
-            <Label>Hero Image</Label>
-            {heroImageUrl && <img src={heroImageUrl} alt="Hero preview" className="mt-1 h-32 w-full rounded-md object-cover" />}
-            <Input
-              type="file"
-              accept="image/*"
-              className="mt-2"
-              disabled={heroUploading}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setHeroUploading(true);
-                try {
-                  const compressed = await compressImage(file);
-                  const url = await siteSettingsService.uploadMedia(compressed, `hero/image-${Date.now()}.jpg`);
-                  setHeroImageUrl(url);
-                  toast({ title: "Image uploaded" });
-                } catch (err: any) {
-                  toast({ title: "Upload failed", description: err.message, variant: "destructive" });
-                } finally {
-                  setHeroUploading(false);
-                }
-              }}
-            />
-          </div>
-          <div>
-            <Label>Hero Video</Label>
-            {heroVideoUrl && <video src={heroVideoUrl} muted loop className="mt-1 h-32 w-full rounded-md object-cover" />}
-            <Input
-              type="file"
-              accept="video/*"
-              className="mt-2"
-              disabled={heroUploading}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                if (file.size > 50 * 1024 * 1024) {
-                  toast({ title: "Video too large", description: "Max 50MB", variant: "destructive" });
-                  return;
-                }
-                setHeroUploading(true);
-                try {
-                  const url = await siteSettingsService.uploadMedia(file, `hero/video-${Date.now()}.${file.name.split(".").pop()}`);
-                  setHeroVideoUrl(url);
-                  toast({ title: "Video uploaded" });
-                } catch (err: any) {
-                  toast({ title: "Upload failed", description: err.message, variant: "destructive" });
-                } finally {
-                  setHeroUploading(false);
-                }
-              }}
-            />
-          </div>
-          <Button
-            size="sm"
-            disabled={heroUploading}
-            onClick={async () => {
-              try {
-                await siteSettingsService.set("hero_media", { mode: heroMode, imageUrl: heroImageUrl, videoUrl: heroVideoUrl });
-                toast({ title: "Hero media saved" });
-              } catch (err: any) {
-                toast({ title: "Error", description: err.message, variant: "destructive" });
-              }
-            }}
-          >
-            <Save className="mr-1 h-4 w-4" /> Save Hero Settings
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* AI Configuration */}
-      <Card className="border-border/50">
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Bot className="h-4 w-4" /> AI Chatbot Configuration</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Primary Provider</Label>
-            <RadioGroup value={aiProvider} onValueChange={(v) => setAiProvider(v as "claude" | "gemini")} className="flex gap-4 mt-1">
-              <div className="flex items-center gap-2"><RadioGroupItem value="claude" id="ai-claude" /><Label htmlFor="ai-claude">Claude (Anthropic)</Label></div>
-              <div className="flex items-center gap-2"><RadioGroupItem value="gemini" id="ai-gemini" /><Label htmlFor="ai-gemini">Gemini (Google)</Label></div>
-            </RadioGroup>
-          </div>
-          <div>
-            <Label>Claude API Key</Label>
-            <div className="flex gap-2 mt-1">
-              <Input
-                type={showClaude ? "text" : "password"}
-                value={claudeKey}
-                onChange={(e) => setClaudeKey(e.target.value)}
-                placeholder="sk-ant-…"
-                className="flex-1"
-              />
-              <Button variant="ghost" size="icon" onClick={() => setShowClaude(!showClaude)}>
-                {showClaude ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-          </div>
-          <div>
-            <Label>Gemini API Key</Label>
-            <div className="flex gap-2 mt-1">
-              <Input
-                type={showGemini ? "text" : "password"}
-                value={geminiKey}
-                onChange={(e) => setGeminiKey(e.target.value)}
-                placeholder="AIza…"
-                className="flex-1"
-              />
-              <Button variant="ghost" size="icon" onClick={() => setShowGemini(!showGemini)}>
-                {showGemini ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            disabled={aiSaving}
-            onClick={async () => {
-              setAiSaving(true);
-              try {
-                await siteSettingsService.set("ai_claude_key", { key: claudeKey });
-                await siteSettingsService.set("ai_gemini_key", { key: geminiKey });
-                await siteSettingsService.set("ai_provider", { provider: aiProvider });
-                toast({ title: "AI configuration saved" });
-              } catch (err: any) {
-                toast({ title: "Error", description: err.message, variant: "destructive" });
-              } finally {
-                setAiSaving(false);
-              }
-            }}
-          >
-            <Save className="mr-1 h-4 w-4" /> {aiSaving ? "Saving…" : "Save AI Settings"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Social Media Links */}
-      <Card className="border-border/50">
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Share2 className="h-4 w-4" /> Social Media Links</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-xs text-muted-foreground">These links appear in the website footer. Leave blank to hide a platform.</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {[
-              { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/africantembo" },
-              { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/africantembo" },
-              { key: "twitter", label: "X (Twitter)", placeholder: "https://x.com/africantembo" },
-              { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/@africantembo" },
-              { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@africantembo" },
-              { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/company/africantembo" },
-              { key: "whatsapp", label: "WhatsApp", placeholder: "https://wa.me/255123456789" },
-            ].map((s) => (
-              <div key={s.key}>
-                <Label>{s.label}</Label>
+        {/* Hero Section Tab */}
+        <TabsContent value="hero" className="mt-6 space-y-6">
+          <Card className="border-border/50">
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Image className="h-4 w-4" /> Hero Section Media</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Display Mode</Label>
+                <RadioGroup value={heroMode} onValueChange={(v) => setHeroMode(v as "image" | "video")} className="flex gap-4 mt-1">
+                  <div className="flex items-center gap-2"><RadioGroupItem value="image" id="hero-img" /><Label htmlFor="hero-img">Image</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="video" id="hero-vid" /><Label htmlFor="hero-vid">Video</Label></div>
+                </RadioGroup>
+              </div>
+              <div>
+                <Label>Hero Image</Label>
+                {heroImageUrl && <img src={heroImageUrl} alt="Hero preview" className="mt-1 h-32 w-full rounded-md object-cover" />}
                 <Input
-                  value={socialLinks[s.key as keyof typeof socialLinks]}
-                  onChange={(e) => setSocialLinks((prev) => ({ ...prev, [s.key]: e.target.value }))}
-                  placeholder={s.placeholder}
-                  className="mt-1"
+                  type="file"
+                  accept="image/*"
+                  className="mt-2"
+                  disabled={heroUploading}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setHeroUploading(true);
+                    try {
+                      const compressed = await compressImage(file);
+                      const url = await siteSettingsService.uploadMedia(compressed, `hero/image-${Date.now()}.jpg`);
+                      setHeroImageUrl(url);
+                      toast({ title: "Image uploaded" });
+                    } catch (err: any) {
+                      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+                    } finally {
+                      setHeroUploading(false);
+                    }
+                  }}
                 />
               </div>
-            ))}
-          </div>
-          <Button
-            size="sm"
-            disabled={socialSaving}
-            onClick={async () => {
-              setSocialSaving(true);
-              try {
-                await siteSettingsService.set("social_links", socialLinks);
-                toast({ title: "Social media links saved" });
-              } catch (err: any) {
-                toast({ title: "Error", description: err.message, variant: "destructive" });
-              } finally {
-                setSocialSaving(false);
-              }
-            }}
-          >
-            <Save className="mr-1 h-4 w-4" /> {socialSaving ? "Saving…" : "Save Social Links"}
-          </Button>
-        </CardContent>
-      </Card>
+              <div>
+                <Label>Hero Video</Label>
+                {heroVideoUrl && <video src={heroVideoUrl} muted loop className="mt-1 h-32 w-full rounded-md object-cover" />}
+                <Input
+                  type="file"
+                  accept="video/*"
+                  className="mt-2"
+                  disabled={heroUploading}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 50 * 1024 * 1024) {
+                      toast({ title: "Video too large", description: "Max 50MB", variant: "destructive" });
+                      return;
+                    }
+                    setHeroUploading(true);
+                    try {
+                      const url = await siteSettingsService.uploadMedia(file, `hero/video-${Date.now()}.${file.name.split(".").pop()}`);
+                      setHeroVideoUrl(url);
+                      toast({ title: "Video uploaded" });
+                    } catch (err: any) {
+                      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+                    } finally {
+                      setHeroUploading(false);
+                    }
+                  }}
+                />
+              </div>
+              <Button
+                size="sm"
+                disabled={heroUploading}
+                onClick={async () => {
+                  try {
+                    await siteSettingsService.set("hero_media", { mode: heroMode, imageUrl: heroImageUrl, videoUrl: heroVideoUrl });
+                    toast({ title: "Hero media saved" });
+                  } catch (err: any) {
+                    toast({ title: "Error", description: err.message, variant: "destructive" });
+                  }
+                }}
+              >
+                <Save className="mr-1 h-4 w-4" /> Save Hero Settings
+              </Button>
+            </CardContent>
+          </Card>
 
-      <Button className="gap-2" onClick={handleSave}><Save className="h-4 w-4" /> Save Settings</Button>
+          {/* AI Hero Design Generation */}
+          <Card className="border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="h-4 w-4 text-primary" /> Generate Hero Designs with AI
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Generate 3 AI-designed safari hero images. Select one to use as your hero image.
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleGenerateHeroDesigns}
+                disabled={heroGenerating || heroUploading}
+                className="gap-1.5"
+              >
+                {heroGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                {heroGenerating ? "Generating…" : "Generate 3 Designs"}
+              </Button>
+
+              {heroDesigns.length > 0 && (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {heroDesigns.map((img, i) => (
+                    <div
+                      key={i}
+                      className="group relative cursor-pointer overflow-hidden rounded-lg border border-border/50 transition-all hover:border-primary/50 hover:shadow-md"
+                      onClick={() => selectHeroDesign(img)}
+                    >
+                      <img
+                        src={img.startsWith("data:") ? img : `data:image/png;base64,${img}`}
+                        alt={`Design ${i + 1}`}
+                        className="aspect-video w-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/60 opacity-0 transition-opacity group-hover:opacity-100">
+                        <Button size="sm" className="gap-1.5">
+                          <Check className="h-3.5 w-3.5" /> Use This
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* AI Configuration Tab */}
+        <TabsContent value="ai" className="mt-6">
+          <Card className="border-border/50">
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Bot className="h-4 w-4" /> AI Chatbot Configuration</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Primary Provider</Label>
+                <RadioGroup value={aiProvider} onValueChange={(v) => setAiProvider(v as "claude" | "gemini")} className="flex gap-4 mt-1">
+                  <div className="flex items-center gap-2"><RadioGroupItem value="claude" id="ai-claude" /><Label htmlFor="ai-claude">Claude (Anthropic)</Label></div>
+                  <div className="flex items-center gap-2"><RadioGroupItem value="gemini" id="ai-gemini" /><Label htmlFor="ai-gemini">Gemini (Google)</Label></div>
+                </RadioGroup>
+              </div>
+              <div>
+                <Label>Claude API Key</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    type={showClaude ? "text" : "password"}
+                    value={claudeKey}
+                    onChange={(e) => setClaudeKey(e.target.value)}
+                    placeholder="sk-ant-…"
+                    className="flex-1"
+                  />
+                  <Button variant="ghost" size="icon" onClick={() => setShowClaude(!showClaude)}>
+                    {showClaude ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Label>Gemini API Key</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    type={showGemini ? "text" : "password"}
+                    value={geminiKey}
+                    onChange={(e) => setGeminiKey(e.target.value)}
+                    placeholder="AIza…"
+                    className="flex-1"
+                  />
+                  <Button variant="ghost" size="icon" onClick={() => setShowGemini(!showGemini)}>
+                    {showGemini ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                disabled={aiSaving}
+                onClick={async () => {
+                  setAiSaving(true);
+                  try {
+                    await siteSettingsService.set("ai_claude_key", { key: claudeKey });
+                    await siteSettingsService.set("ai_gemini_key", { key: geminiKey });
+                    await siteSettingsService.set("ai_provider", { provider: aiProvider });
+                    toast({ title: "AI configuration saved" });
+                  } catch (err: any) {
+                    toast({ title: "Error", description: err.message, variant: "destructive" });
+                  } finally {
+                    setAiSaving(false);
+                  }
+                }}
+              >
+                <Save className="mr-1 h-4 w-4" /> {aiSaving ? "Saving…" : "Save AI Settings"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Social Media Tab */}
+        <TabsContent value="social" className="mt-6">
+          <Card className="border-border/50">
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Share2 className="h-4 w-4" /> Social Media Links</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-xs text-muted-foreground">These links appear in the website footer. Leave blank to hide a platform.</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[
+                  { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/africantembo" },
+                  { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/africantembo" },
+                  { key: "twitter", label: "X (Twitter)", placeholder: "https://x.com/africantembo" },
+                  { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/@africantembo" },
+                  { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@africantembo" },
+                  { key: "linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/company/africantembo" },
+                  { key: "whatsapp", label: "WhatsApp", placeholder: "https://wa.me/255123456789" },
+                ].map((s) => (
+                  <div key={s.key}>
+                    <Label>{s.label}</Label>
+                    <Input
+                      value={socialLinks[s.key as keyof typeof socialLinks]}
+                      onChange={(e) => setSocialLinks((prev) => ({ ...prev, [s.key]: e.target.value }))}
+                      placeholder={s.placeholder}
+                      className="mt-1"
+                    />
+                  </div>
+                ))}
+              </div>
+              <Button
+                size="sm"
+                disabled={socialSaving}
+                onClick={async () => {
+                  setSocialSaving(true);
+                  try {
+                    await siteSettingsService.set("social_links", socialLinks);
+                    toast({ title: "Social media links saved" });
+                  } catch (err: any) {
+                    toast({ title: "Error", description: err.message, variant: "destructive" });
+                  } finally {
+                    setSocialSaving(false);
+                  }
+                }}
+              >
+                <Save className="mr-1 h-4 w-4" /> {socialSaving ? "Saving…" : "Save Social Links"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </motion.div>
   );
 }
