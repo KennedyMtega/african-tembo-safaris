@@ -18,10 +18,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { action, prompt, content, title, category, tags } = await req.json();
+    const { action, prompt, content, title, category, tags, documentText } = await req.json();
 
-    if (!action || !["generate", "improve", "suggest"].includes(action)) {
-      return new Response(JSON.stringify({ error: "Invalid action. Use: generate, improve, suggest" }), {
+    if (!action || !["generate", "improve", "suggest", "from_document"].includes(action)) {
+      return new Response(JSON.stringify({ error: "Invalid action. Use: generate, improve, suggest, from_document" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -53,6 +53,16 @@ Categories to choose from: FAQ, Destinations, Policies, Safety, Wildlife, Accomm
 You MUST call the "save_article" tool with the improved article data.`;
 
       userPrompt = `Please improve this article:\n\nTitle: ${title || "Untitled"}\nCategory: ${category || "General"}\nTags: ${(tags || []).join(", ")}\n\nContent:\n${content || "No content provided"}`;
+    } else if (action === "from_document") {
+      systemPrompt = `You are a knowledge base content processor for a safari tour company called Tembo Safari. You receive raw document text and must extract and organize the key information into a well-structured knowledge base article.
+
+IMPORTANT: Only improve and clean up the content when strictly necessary. Preserve the original meaning, facts, and style as much as possible. Focus on organizing the content logically with clear sections rather than rewriting it.
+
+You MUST call the "save_article" tool with the structured article data.
+
+Categories to choose from: FAQ, Destinations, Policies, Safety, Wildlife, Accommodation, Transportation, Booking, General`;
+
+      userPrompt = `Process this document into a knowledge base article. Keep the content as close to the original as possible, only restructuring and cleaning up when necessary:\n\n${documentText || "No document text provided"}`;
     } else if (action === "suggest") {
       // Fetch existing articles to analyze gaps
       const { data: existingArticles } = await supabase
@@ -83,7 +93,7 @@ Consider topics like: visa/travel requirements, packing lists, health & vaccinat
     };
 
     // Use tool calling for structured output
-    if (action === "generate" || action === "improve") {
+    if (action === "generate" || action === "improve" || action === "from_document") {
       body.tools = [
         {
           type: "function",

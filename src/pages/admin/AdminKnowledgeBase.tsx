@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen, Plus, Pencil, Trash2, Search, X, Sparkles, Wand2,
   Lightbulb, FileText, Clock, Hash, ArrowLeft, Loader2, Check,
+  Upload,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -46,6 +47,7 @@ export default function AdminKnowledgeBase() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [suggestions, setSuggestions] = useState<TopicSuggestion[]>([]);
+  const [docUploading, setDocUploading] = useState(false);
 
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<KBArticle | null>(null);
@@ -209,6 +211,37 @@ export default function AdminKnowledgeBase() {
   const useSuggestion = (s: TopicSuggestion) => {
     setAiPrompt(`Write a comprehensive article about: ${s.title}. ${s.description}`);
     setSuggestions([]);
+  };
+
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setDocUploading(true);
+    try {
+      let text = "";
+      if (file.name.endsWith(".txt") || file.name.endsWith(".md")) {
+        text = await file.text();
+      } else {
+        text = await file.text();
+      }
+      if (!text.trim()) {
+        toast({ title: "Empty document", variant: "destructive" });
+        return;
+      }
+      const data = await callKbAssistant("from_document", { documentText: text });
+      if (data?.article) {
+        setFormTitle(data.article.title);
+        setFormContent(data.article.content);
+        setFormCategory(data.article.category || "");
+        setFormTags((data.article.tags || []).join(", "));
+        toast({ title: "Document processed! Review and save." });
+      }
+    } catch (err: any) {
+      toast({ title: "Processing failed", description: err.message, variant: "destructive" });
+    } finally {
+      setDocUploading(false);
+      e.target.value = "";
+    }
   };
 
   return (
@@ -481,6 +514,31 @@ export default function AdminKnowledgeBase() {
                                 </Button>
                               </div>
                             ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Upload Document */}
+                    <Card className="border-border/50">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-sm">
+                          <Upload className="h-4 w-4 text-primary" /> Upload Document
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-xs text-muted-foreground">
+                          Upload a .txt or .md file. The AI will process it into a structured KB article, only cleaning up when necessary.
+                        </p>
+                        <Input
+                          type="file"
+                          accept=".txt,.md"
+                          onChange={handleDocumentUpload}
+                          disabled={docUploading || aiLoading}
+                        />
+                        {docUploading && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Processing document…
                           </div>
                         )}
                       </CardContent>
