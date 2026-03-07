@@ -28,6 +28,12 @@ export default function PackageDetailPage() {
 
   return (
     <section className="bg-background py-10 md:py-16">
+      <SEOHead
+        title={pkg.title}
+        description={pkg.shortDescription || pkg.description?.slice(0, 155) || `Book the ${pkg.title} safari package with African Tembo Safari`}
+        ogImage={pkg.images[0]}
+        ogType="product"
+      />
       <div className="container">
         <nav className="mb-6 flex items-center gap-1 text-sm text-muted-foreground">
           <Link to="/packages" className="hover:text-primary">Packages</Link>

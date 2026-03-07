@@ -33,6 +33,8 @@ export default function PackagesPage() {
   }, [packages, search, destination, difficulty, sortBy]);
 
   return (
+    <>
+    <SEOHead title="Safari Packages" description="Browse our curated selection of Tanzania safari packages — Serengeti, Ngorongoro, Kilimanjaro, Zanzibar and more. Book your dream safari today." />
     <section className="bg-background py-12 md:py-20">
       <div className="container">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">

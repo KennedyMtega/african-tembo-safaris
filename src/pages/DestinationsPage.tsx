@@ -16,6 +16,8 @@ export default function DestinationsPage() {
   const { data: destinations = [], isLoading } = useQuery({ queryKey: ["destinations"], queryFn: () => destinationService.getAll() });
 
   return (
+    <>
+    <SEOHead title="Destinations" description="Explore Tanzania's most iconic safari destinations — Serengeti, Ngorongoro Crater, Kilimanjaro, Zanzibar, Tarangire, Lake Manyara and more." />
     <section className="bg-background py-12 md:py-20">
       <div className="container">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
