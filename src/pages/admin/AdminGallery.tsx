@@ -10,8 +10,61 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { Image, Video, Trash2, Upload, GalleryHorizontalEnd, Sparkles, Loader2, Check } from "lucide-react";
+import { Image, Video, Trash2, Upload, GalleryHorizontalEnd, Sparkles, Loader2, Check, Pencil } from "lucide-react";
 
+/* ---------- Inline Title Editor ---------- */
+function InlineTitleEditor({ id, currentTitle, onSaved }: { id: string; currentTitle: string; onSaved: () => void }) {
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(currentTitle);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (value === currentTitle) { setEditing(false); return; }
+    setSaving(true);
+    try {
+      await galleryService.updateTitle(id, value);
+      toast({ title: "Title updated" });
+      onSaved();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+      setEditing(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <button
+        className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate hover:text-primary transition-colors"
+        onClick={() => { setValue(currentTitle); setEditing(true); }}
+        title="Click to rename"
+      >
+        <span className="truncate">{currentTitle || "Untitled"}</span>
+        <Pencil className="h-3 w-3 shrink-0 opacity-50" />
+      </button>
+    );
+  }
+
+  return (
+    <form
+      className="flex items-center gap-1.5"
+      onSubmit={(e) => { e.preventDefault(); save(); }}
+    >
+      <Input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="h-7 text-xs"
+        autoFocus
+        onBlur={save}
+        disabled={saving}
+      />
+    </form>
+  );
+}
+
+/* ---------- Main Component ---------- */
 export default function AdminGallery() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -29,6 +82,11 @@ export default function AdminGallery() {
     queryFn: () => galleryService.getAll(),
   });
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
+    queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
@@ -45,8 +103,7 @@ export default function AdminGallery() {
         await galleryService.create({ title: title || undefined, type: isVideo ? "video" : "image", url });
       }
       toast({ title: "Uploaded successfully" });
-      queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
-      queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
+      invalidate();
       setTitle("");
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
@@ -59,8 +116,7 @@ export default function AdminGallery() {
   const handleDelete = async (id: string) => {
     try {
       await galleryService.remove(id);
-      queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
-      queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
+      invalidate();
       toast({ title: "Item deleted" });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -111,8 +167,7 @@ export default function AdminGallery() {
       const file = new File([blob], `ai-gallery-${Date.now()}.png`, { type: "image/png" });
       const url = await galleryService.uploadFile(file);
       await galleryService.create({ title: aiPrompt.slice(0, 100) || "AI Generated", type: "image", url });
-      queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
-      queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
+      invalidate();
       toast({ title: "Image saved to gallery" });
       setGeneratedImages((prev) => prev.filter((_, i) => i !== index));
     } catch (err: any) {
@@ -227,8 +282,8 @@ export default function AdminGallery() {
                 </div>
               </div>
               <CardContent className="flex items-center justify-between p-3">
-                <span className="text-sm font-medium text-foreground truncate">{item.title || "Untitled"}</span>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
+                <InlineTitleEditor id={item.id} currentTitle={item.title || ""} onSaved={invalidate} />
+                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive" onClick={() => handleDelete(item.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </CardContent>
