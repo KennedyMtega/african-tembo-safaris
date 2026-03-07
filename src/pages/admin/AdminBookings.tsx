@@ -9,7 +9,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { bookingService } from "@/services/bookingService";
 import type { Booking } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Download, ChevronDown, ChevronRight, Mail } from "lucide-react";
+import { Search, Download, ChevronDown, ChevronRight, Mail, CalendarDays } from "lucide-react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
