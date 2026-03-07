@@ -128,7 +128,7 @@ export default function PackageDetailPage() {
                 <Button asChild size="lg" className="w-full">
                   <Link to={`/book/${pkg.slug}`}>Book Now</Link>
                 </Button>
-                <p className="text-center text-xs text-muted-foreground">No payment required to reserve</p>
+                <p className="text-center text-xs text-muted-foreground">50% deposit required to secure your booking</p>
               </CardContent>
             </Card>
           </div>
