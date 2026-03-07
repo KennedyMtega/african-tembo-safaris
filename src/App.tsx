@@ -39,6 +39,7 @@ import AdminReports from "@/pages/admin/AdminReports";
 import AdminGallery from "@/pages/admin/AdminGallery";
 import AdminKnowledgeBase from "@/pages/admin/AdminKnowledgeBase";
 import AdminCRM from "@/pages/admin/AdminCRM";
+import AdminBookingCalendar from "@/pages/admin/AdminBookingCalendar";
 import GalleryPage from "@/pages/GalleryPage";
 import CustomerDashboard from "@/pages/customer/CustomerDashboard";
 import CustomerBookings from "@/pages/customer/CustomerBookings";
@@ -95,6 +96,7 @@ const App = () => (
               <Route path="/admin/packages/new" element={<AdminPackageForm />} />
               <Route path="/admin/packages/:id/edit" element={<AdminPackageForm />} />
               <Route path="/admin/bookings" element={<AdminBookings />} />
+              <Route path="/admin/bookings/calendar" element={<AdminBookingCalendar />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/payments" element={<AdminPayments />} />
               <Route path="/admin/destinations" element={<AdminDestinations />} />

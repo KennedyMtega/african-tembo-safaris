@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Package, CalendarCheck, Users, CreditCard, LogOut,
   BarChart3, MapPin, Star, MessageSquare, Activity, Settings, FileText,
-  ChevronLeft, ChevronRight, GalleryHorizontalEnd, BookOpen, Contact,
+  ChevronLeft, ChevronRight, GalleryHorizontalEnd, BookOpen, Contact, CalendarDays,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +25,7 @@ const sections = [
     links: [
       { to: "/admin/packages", label: "Packages", icon: Package },
       { to: "/admin/bookings", label: "Bookings", icon: CalendarCheck },
+      { to: "/admin/bookings/calendar", label: "Calendar", icon: CalendarDays },
       { to: "/admin/users", label: "Users", icon: Users },
       { to: "/admin/payments", label: "Payments", icon: CreditCard },
     ],

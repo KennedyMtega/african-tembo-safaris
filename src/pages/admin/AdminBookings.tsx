@@ -9,7 +9,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { bookingService } from "@/services/bookingService";
 import type { Booking } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Download, ChevronDown, ChevronRight, Mail } from "lucide-react";
+import { Search, Download, ChevronDown, ChevronRight, Mail, CalendarDays } from "lucide-react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -80,7 +81,12 @@ export default function AdminBookings() {
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" className="gap-1.5 ml-auto" onClick={exportCSV}>
+        <Link to="/admin/bookings/calendar" className="ml-auto">
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5" /> Calendar
+          </Button>
+        </Link>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={exportCSV}>
           <Download className="h-3.5 w-3.5" /> Export CSV
         </Button>
       </div>
