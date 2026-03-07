@@ -163,15 +163,13 @@ export default function AboutPage() {
                     viewport={{ once: true, margin: "-100px" }}
                     className="w-full md:w-1/2"
                   >
-                    <div className="relative overflow-hidden rounded-2xl bg-secondary/50">
-                      <img
-                        src={p.img}
-                        alt={p.title}
-                        onError={(e) => { (e.target as HTMLImageElement).src = fallback; }}
-                        className="h-72 w-full object-contain md:h-80 lg:h-96"
-                        loading="lazy"
-                      />
-                    </div>
+                    <img
+                      src={p.img}
+                      alt={p.title}
+                      onError={(e) => { (e.target as HTMLImageElement).src = fallback; }}
+                      className="h-72 w-full object-contain drop-shadow-xl md:h-80 lg:h-96"
+                      loading="lazy"
+                    />
                   </motion.div>
 
                   {/* Text */}
