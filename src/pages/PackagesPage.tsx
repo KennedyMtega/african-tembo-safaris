@@ -56,5 +56,6 @@ export default function PackagesPage() {
         )}
       </div>
     </section>
+    </>
   );
 }

@@ -30,7 +30,8 @@ export default function HomePage() {
   const heroSrc = heroMedia?.imageUrl || heroImageFallback;
 
   return (
-    <SEOHead />
+    <>
+      <SEOHead />
       {/* ===== HERO ===== */}
       <section className="relative flex min-h-[85vh] items-center justify-center overflow-hidden">
         {showVideo ? (
