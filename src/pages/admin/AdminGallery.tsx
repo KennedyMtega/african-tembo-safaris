@@ -174,10 +174,10 @@ export default function AdminGallery() {
           <CardHeader><CardTitle className="text-base">Generated Images — Click to add to gallery</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-3">
-              {generatedImages.map((img, i) => (
+              {generatedImages.map((item, i) => (
                 <div key={i} className="group relative overflow-hidden rounded-lg border border-border/50 transition-all hover:border-primary/50">
                   <img
-                    src={img.startsWith("data:") ? img : `data:image/png;base64,${img}`}
+                    src={item.image.startsWith("data:") ? item.image : `data:image/png;base64,${item.image}`}
                     alt={`Generated ${i + 1}`}
                     className="aspect-video w-full object-cover"
                   />
@@ -186,12 +186,17 @@ export default function AdminGallery() {
                       size="sm"
                       className="gap-1.5"
                       disabled={savingAi === i}
-                      onClick={() => saveGeneratedImage(img, i)}
+                      onClick={() => saveGeneratedImage(item, i)}
                     >
                       {savingAi === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                       {savingAi === i ? "Saving…" : "Add to Gallery"}
                     </Button>
                   </div>
+                  {item.crafted_prompt && (
+                    <div className="p-2 bg-muted/80">
+                      <p className="text-[10px] leading-tight text-muted-foreground line-clamp-3">{item.crafted_prompt}</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
