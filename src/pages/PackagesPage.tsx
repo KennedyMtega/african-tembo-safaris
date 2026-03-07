@@ -4,6 +4,7 @@ import { packageService } from "@/services/packageService";
 import { PackageCard } from "@/components/PackageCard";
 import { PackageFilters } from "@/components/PackageFilters";
 import { useQuery } from "@tanstack/react-query";
+import SEOHead from "@/components/SEOHead";
 
 export default function PackagesPage() {
   const [search, setSearch] = useState("");
@@ -32,6 +33,8 @@ export default function PackagesPage() {
   }, [packages, search, destination, difficulty, sortBy]);
 
   return (
+    <>
+    <SEOHead title="Safari Packages" description="Browse our curated selection of Tanzania safari packages — Serengeti, Ngorongoro, Kilimanjaro, Zanzibar and more. Book your dream safari today." />
     <section className="bg-background py-12 md:py-20">
       <div className="container">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
@@ -53,5 +56,6 @@ export default function PackagesPage() {
         )}
       </div>
     </section>
+    </>
   );
 }

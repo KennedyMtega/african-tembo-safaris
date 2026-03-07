@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { galleryService, type GalleryItem } from "@/services/galleryService";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
+import SEOHead from "@/components/SEOHead";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -34,6 +35,7 @@ export default function GalleryPage() {
 
   return (
     <>
+      <SEOHead title="Gallery" description="Stunning photos and videos from our Tanzania safari adventures. Serengeti wildlife, Ngorongoro landscapes, Kilimanjaro views and Zanzibar beaches." />
       <section className="bg-primary py-16 text-center">
         <div className="container">
           <h1 className="font-display text-4xl font-bold text-primary-foreground md:text-5xl">Gallery</h1>

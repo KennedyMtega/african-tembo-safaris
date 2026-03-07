@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Clock, Users, Star, Check, X, ChevronRight } from "lucide-react";
+import SEOHead from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +28,12 @@ export default function PackageDetailPage() {
 
   return (
     <section className="bg-background py-10 md:py-16">
+      <SEOHead
+        title={pkg.title}
+        description={pkg.shortDescription || pkg.description?.slice(0, 155) || `Book the ${pkg.title} safari package with African Tembo Safari`}
+        ogImage={pkg.images[0]}
+        ogType="product"
+      />
       <div className="container">
         <nav className="mb-6 flex items-center gap-1 text-sm text-muted-foreground">
           <Link to="/packages" className="hover:text-primary">Packages</Link>

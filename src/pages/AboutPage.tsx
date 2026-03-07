@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Footprints, Heart, Leaf, Eye, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import SEOHead from "@/components/SEOHead";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -9,6 +10,8 @@ const fadeUp = {
 
 export default function AboutPage() {
   return (
+    <>
+    <SEOHead title="About Us" description="Learn the story behind African Tembo Safari — born from the red earth of Tanzania. Authentic, community-driven safari experiences since day one." />
     <section className="bg-background py-12 md:py-20">
       <div className="container max-w-4xl">
         {/* Header */}
@@ -115,5 +118,6 @@ export default function AboutPage() {
         </motion.div>
       </div>
     </section>
+    </>
   );
 }
