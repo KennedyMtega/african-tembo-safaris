@@ -1,55 +1,98 @@
 
 
-# Fix Broken Images, Improve Booking Traveler Flow, Add 50% Deposit Requirement
+# Settings Restructure, Gallery AI Images, and KB Document Upload
 
-## Three issues to address
+## Overview
+Four main changes: (1) Split the Settings page into tabbed sub-sections, (2) Generate AI images for the gallery, (3) Add document upload to the Knowledge Base AI assistant.
 
-### 1. Broken Unsplash Images (Ngorongoro + Kilimanjaro packages and destinations)
+---
 
-**Root cause:** Multiple Unsplash image URLs used in the seed data return 404. Confirmed broken:
-- All 5 Ngorongoro package images
-- Ngorongoro destination image
-- At least 2 Kilimanjaro package images
+## 1. Settings Page — Tabbed Layout
 
-**Fix:** 
-- Update the broken image URLs in the database using SQL UPDATE statements (via the insert tool) with verified working Unsplash image URLs
-- Add an `onError` fallback handler to all `<img>` tags across `PackageCard.tsx`, `PackageDetailPage.tsx`, and `BookingPage.tsx` so that broken images gracefully fall back to `/placeholder.svg` instead of showing a broken icon. This prevents future broken image issues regardless of the source.
+**File: `src/pages/admin/AdminSettings.tsx`**
 
-### 2. Booking Flow — Traveler Email Flexibility + Note
+Replace the single scrolling page with a horizontal tab navigation at the top. Each section gets its own tab:
 
-**Current behavior:** Every traveler requires a unique email. The lead traveler (Traveler 1) must enter their email, then every additional traveler also requires an email.
+- **Company Profile** — Company name, email, phone, address, system (currency/timezone), notifications
+- **Team Management** — Employee list, invite dialog, role management
+- **Hero Section** — Hero media mode toggle, image/video upload, save (keep all existing upload functionality intact)
+- **AI Configuration** — Provider selection, API keys
+- **Social Media** — Social links form
 
-**Changes to `BookingPage.tsx` Step 2:**
-- For Traveler 1: Email remains required (this is the booking contact)
-- For Travelers 2+: Add a "Use same email as lead traveler" checkbox that auto-fills the email from Traveler 1. Email field becomes optional for additional travelers.
-- Add a well-written info note above the travelers section:
-  > "Each traveler will receive personalized trip preparation details and itinerary information at their email address. If a fellow traveler doesn't have a separate email, you may use the lead traveler's email for their booking."
-- Update `canProceedStep2` validation: only Traveler 1 requires email; others can be blank or filled
+Each tab renders only its own content, eliminating the endless scroll. All existing state and logic remains the same, just reorganized into `TabsContent` blocks using the existing Radix Tabs component.
 
-### 3. 50% Deposit Payment Requirement
+---
 
-**Changes to booking flow:**
-- Add a new **Step 4: Payment** between Review and Confirmation (update `STEPS` array to `["Select", "Details", "Review", "Payment"]`)
-- In Step 3 (Review), show the deposit amount prominently: "50% deposit required to secure your booking: $X,XXX"
-- Step 4 (Payment) shows:
-  - Deposit amount (50% of total)
-  - Remaining balance and when it's due
-  - A note: "A 50% deposit is required to secure your safari booking. The remaining balance is due 30 days before your departure date."
-  - "Pay Deposit" button that creates the booking with `payment_status: 'partial'`
-  - For now, since no payment gateway is integrated yet, the button will create the booking and show a confirmation page with payment instructions (bank transfer / follow-up). The system records the expected deposit amount.
-- Add `deposit_amount` to the bookings table via migration
-- Update `bookingService.create` to include `deposit_amount`
-- Update `BookingConfirmation.tsx` to show deposit info and next steps
+## 2. Gallery — AI-Generated Images
 
-## Files Changed
+**File: `src/pages/admin/AdminGallery.tsx`**
 
-| File | Change |
+Add a "Generate with AI" section alongside the existing upload form:
+- Text prompt input (e.g., "African elephant at sunset in the Serengeti")
+- "Generate" button that calls a new edge function
+- Shows 3 generated image previews the admin can select from
+- Selected images get uploaded to the `site-media` bucket and saved to `gallery_items` table
+- Existing manual upload remains untouched
+
+**File: `supabase/functions/generate-gallery-image/index.ts`** (new)
+
+Edge function that:
+- Takes a prompt string
+- Calls Lovable AI Gateway with `google/gemini-2.5-flash-image` model and `modalities: ["image", "text"]`
+- Returns base64 image data
+- Called 3 times (or 3 prompts with variations) to produce 3 options
+- The frontend uploads the selected base64 image to Supabase storage
+
+**File: `supabase/config.toml`** — Add `[functions.generate-gallery-image]` with `verify_jwt = false`
+
+The gallery items are already visible on the public `/gallery` page via `galleryService.getAll()` with the existing `Public read gallery` RLS policy, so no changes needed there.
+
+---
+
+## 3. Hero Section — Design Presets
+
+Within the Hero Section tab in settings, add a "Generate Hero Designs" feature:
+- Button to generate 3 AI hero images with safari-themed prompts
+- Shows 3 preview cards the admin can click to select
+- Selecting one sets it as `heroImageUrl` (same flow as current upload)
+- The existing upload functionality (image and video) remains fully intact alongside this
+
+Uses the same `generate-gallery-image` edge function with different prompts.
+
+---
+
+## 4. Knowledge Base — Document Upload + AI Processing
+
+**File: `src/pages/admin/AdminKnowledgeBase.tsx`**
+
+Add a new section in the AI Assistant tab:
+- **"Upload Document"** card with a file input (accepts `.txt`, `.md`, `.pdf`, `.docx`)
+- On upload, reads the file content client-side (for text files via FileReader; for PDF/DOCX, extracts text client-side or sends raw to edge function)
+- Sends the extracted text to the existing `kb-assistant` edge function with action `"generate"` and the document content as the prompt
+- AI processes the document, structures it into a proper KB article (title, content, category, tags)
+- Auto-fills the editor form fields
+- Admin reviews and clicks Save
+
+**File: `supabase/functions/kb-assistant/index.ts`**
+
+Add a new action `"from_document"`:
+- Receives raw document text
+- System prompt instructs AI to extract key information, organize it into a well-structured KB article
+- Improve and clean up content only when necessary (as requested)
+- Returns structured article data via the same `save_article` tool call pattern
+
+---
+
+## Technical Summary
+
+| File | Action |
 |------|--------|
-| `src/components/PackageCard.tsx` | Add `onError` fallback to img |
-| `src/pages/PackageDetailPage.tsx` | Add `onError` fallback to all img tags |
-| `src/pages/BookingPage.tsx` | Traveler email flexibility, info note, 50% deposit step, updated steps array |
-| `src/pages/BookingConfirmation.tsx` | Show deposit amount and payment instructions |
-| `src/services/bookingService.ts` | Include deposit_amount in create |
-| SQL migration | Add `deposit_amount` column to bookings |
-| SQL data update | Fix broken Ngorongoro + Kilimanjaro image URLs in packages and destinations tables |
+| `src/pages/admin/AdminSettings.tsx` | Restructure into 5 tabs |
+| `src/pages/admin/AdminGallery.tsx` | Add AI image generation UI |
+| `src/pages/admin/AdminKnowledgeBase.tsx` | Add document upload in AI tab |
+| `supabase/functions/generate-gallery-image/index.ts` | New — AI image generation |
+| `supabase/functions/kb-assistant/index.ts` | Add `from_document` action |
+| `supabase/config.toml` | Add new function entry |
+
+No database changes needed — all existing tables and RLS policies support these features.
 

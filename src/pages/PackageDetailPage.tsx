@@ -38,12 +38,12 @@ export default function PackageDetailPage() {
           <div className="lg:col-span-2 space-y-8">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="overflow-hidden rounded-lg">
-                <img src={mainImage} alt={pkg.title} className="h-72 w-full object-cover md:h-96" />
+                <img src={mainImage} alt={pkg.title} className="h-72 w-full object-cover md:h-96" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
               </div>
               {thumbs.length > 0 && (
                 <div className="mt-3 flex gap-3">
                   {thumbs.map((img, i) => (
-                    <img key={i} src={img} alt="" className="h-20 w-28 rounded-md object-cover border border-border" />
+                    <img key={i} src={img} alt="" className="h-20 w-28 rounded-md object-cover border border-border" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
                   ))}
                 </div>
               )}
@@ -128,7 +128,7 @@ export default function PackageDetailPage() {
                 <Button asChild size="lg" className="w-full">
                   <Link to={`/book/${pkg.slug}`}>Book Now</Link>
                 </Button>
-                <p className="text-center text-xs text-muted-foreground">No payment required to reserve</p>
+                <p className="text-center text-xs text-muted-foreground">50% deposit required to secure your booking</p>
               </CardContent>
             </Card>
           </div>

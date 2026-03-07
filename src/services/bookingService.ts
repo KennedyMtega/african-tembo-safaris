@@ -72,6 +72,7 @@ export const bookingService = {
     startDate: string;
     endDate: string;
     totalAmount: number;
+    depositAmount?: number;
     specialRequests?: string;
     travelers: Traveler[];
   }): Promise<Booking> {
@@ -84,6 +85,7 @@ export const bookingService = {
       start_date: booking.startDate,
       end_date: booking.endDate,
       total_amount: booking.totalAmount,
+      deposit_amount: booking.depositAmount || 0,
       special_requests: booking.specialRequests || null,
       status: "pending",
       payment_status: "pending",
