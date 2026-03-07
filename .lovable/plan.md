@@ -1,73 +1,98 @@
 
 
-# Security Scan Results — Fix Error-Level Issues
+# Settings Restructure, Gallery AI Images, and KB Document Upload
 
-## Scan Summary
+## Overview
+Four main changes: (1) Split the Settings page into tabbed sub-sections, (2) Generate AI images for the gallery, (3) Add document upload to the Knowledge Base AI assistant.
 
-The re-scan found **2 errors** and **6 warnings**.
+---
 
-### Error-Level Issues (to fix)
+## 1. Settings Page — Tabbed Layout
 
-**1. "Customer contact information is publicly readable" (`profiles` table)**
+**File: `src/pages/admin/AdminSettings.tsx`**
 
-The admin/management SELECT policies on `profiles` apply to `{public}` role (i.e., unauthenticated users can potentially access them). The policies use `has_role(auth.uid(), 'admin')` which should return false for anonymous users, but the scanner flags that the policy target is `public` instead of `authenticated`. Fix: recreate the admin and management SELECT policies with `TO authenticated` explicitly.
+Replace the single scrolling page with a horizontal tab navigation at the top. Each section gets its own tab:
 
-**2. "Traveler personal information is exposed to booking owners" (`booking_travelers` table)**
+- **Company Profile** — Company name, email, phone, address, system (currency/timezone), notifications
+- **Team Management** — Employee list, invite dialog, role management
+- **Hero Section** — Hero media mode toggle, image/video upload, save (keep all existing upload functionality intact)
+- **AI Configuration** — Provider selection, API keys
+- **Social Media** — Social links form
 
-The "Users read own travelers" policy lets a booking owner see ALL travelers on their booking, including other people's personal data (email, phone, special needs). Fix: add a self-check so users can only see traveler records where the traveler email matches their own profile email, OR scope it so only admin/management sees full traveler lists while users see a limited view.
+Each tab renders only its own content, eliminating the endless scroll. All existing state and logic remains the same, just reorganized into `TabsContent` blocks using the existing Radix Tabs component.
 
-However, for a booking system, the booking owner legitimately needs to see their co-travelers (they entered the data). This is more of a privacy design decision. The pragmatic fix is to acknowledge this is intentional — the booking owner submitted these travelers. We can mark this as acknowledged, or restrict the fields returned. Since the scanner flags it as error-level, we should add a narrower policy.
+---
 
-**Practical approach for issue #2**: Since the booking creator entered the traveler data themselves, the real risk is minimal. But to satisfy the scanner, we can restrict users to only seeing travelers they personally created (matching their auth email), while admin/management retains full access. Alternatively, we simply tighten the policy description and mark it as reviewed.
+## 2. Gallery — AI-Generated Images
 
-## Plan
+**File: `src/pages/admin/AdminGallery.tsx`**
 
-### Migration SQL
+Add a "Generate with AI" section alongside the existing upload form:
+- Text prompt input (e.g., "African elephant at sunset in the Serengeti")
+- "Generate" button that calls a new edge function
+- Shows 3 generated image previews the admin can select from
+- Selected images get uploaded to the `site-media` bucket and saved to `gallery_items` table
+- Existing manual upload remains untouched
 
-```sql
--- Fix 1: Recreate profiles admin/management policies with TO authenticated
-DROP POLICY IF EXISTS "Admin reads all profiles" ON public.profiles;
-DROP POLICY IF EXISTS "Management reads all profiles" ON public.profiles;
+**File: `supabase/functions/generate-gallery-image/index.ts`** (new)
 
-CREATE POLICY "Admin reads all profiles"
-  ON public.profiles FOR SELECT TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'::app_role));
+Edge function that:
+- Takes a prompt string
+- Calls Lovable AI Gateway with `google/gemini-2.5-flash-image` model and `modalities: ["image", "text"]`
+- Returns base64 image data
+- Called 3 times (or 3 prompts with variations) to produce 3 options
+- The frontend uploads the selected base64 image to Supabase storage
 
-CREATE POLICY "Management reads all profiles"
-  ON public.profiles FOR SELECT TO authenticated
-  USING (public.has_role(auth.uid(), 'management'::app_role));
+**File: `supabase/config.toml`** — Add `[functions.generate-gallery-image]` with `verify_jwt = false`
 
--- Fix 2: Tighten booking_travelers user access
--- Users can only read travelers where their email matches the traveler email
--- (since they submitted the form with their own email as primary)
-DROP POLICY IF EXISTS "Users read own travelers" ON public.booking_travelers;
+The gallery items are already visible on the public `/gallery` page via `galleryService.getAll()` with the existing `Public read gallery` RLS policy, so no changes needed there.
 
-CREATE POLICY "Users read own travelers"
-  ON public.booking_travelers FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM bookings b
-      WHERE b.id = booking_travelers.booking_id
-        AND b.user_id = auth.uid()
-    )
-    AND (
-      email = (SELECT p.email FROM profiles p WHERE p.id = auth.uid())
-      OR public.has_role(auth.uid(), 'admin'::app_role)
-      OR public.has_role(auth.uid(), 'management'::app_role)
-    )
-  );
-```
+---
 
-### Warnings (not fixing, informational)
+## 3. Hero Section — Design Presets
 
-| Warning | Status |
-|---------|--------|
-| RLS Policy Always True (chat_messages INSERT, chat_conversations INSERT) | Intentional — public chat widget needs anonymous inserts |
-| Leaked Password Protection Disabled | Supabase dashboard setting, not code — user should enable in Auth settings |
-| CRM contacts accessible to management | Intentional — management role needs CRM access |
-| Chat visitor info accessible to staff | Intentional — needed for customer support |
-| Anonymous inquiry user_id validation | Low risk — COALESCE pattern acceptable |
-| Package-images open upload | Storage policy, warn level — should restrict to admin/management |
+Within the Hero Section tab in settings, add a "Generate Hero Designs" feature:
+- Button to generate 3 AI hero images with safari-themed prompts
+- Shows 3 preview cards the admin can click to select
+- Selecting one sets it as `heroImageUrl` (same flow as current upload)
+- The existing upload functionality (image and video) remains fully intact alongside this
 
-No frontend code changes needed. Single migration only.
+Uses the same `generate-gallery-image` edge function with different prompts.
+
+---
+
+## 4. Knowledge Base — Document Upload + AI Processing
+
+**File: `src/pages/admin/AdminKnowledgeBase.tsx`**
+
+Add a new section in the AI Assistant tab:
+- **"Upload Document"** card with a file input (accepts `.txt`, `.md`, `.pdf`, `.docx`)
+- On upload, reads the file content client-side (for text files via FileReader; for PDF/DOCX, extracts text client-side or sends raw to edge function)
+- Sends the extracted text to the existing `kb-assistant` edge function with action `"generate"` and the document content as the prompt
+- AI processes the document, structures it into a proper KB article (title, content, category, tags)
+- Auto-fills the editor form fields
+- Admin reviews and clicks Save
+
+**File: `supabase/functions/kb-assistant/index.ts`**
+
+Add a new action `"from_document"`:
+- Receives raw document text
+- System prompt instructs AI to extract key information, organize it into a well-structured KB article
+- Improve and clean up content only when necessary (as requested)
+- Returns structured article data via the same `save_article` tool call pattern
+
+---
+
+## Technical Summary
+
+| File | Action |
+|------|--------|
+| `src/pages/admin/AdminSettings.tsx` | Restructure into 5 tabs |
+| `src/pages/admin/AdminGallery.tsx` | Add AI image generation UI |
+| `src/pages/admin/AdminKnowledgeBase.tsx` | Add document upload in AI tab |
+| `supabase/functions/generate-gallery-image/index.ts` | New — AI image generation |
+| `supabase/functions/kb-assistant/index.ts` | Add `from_document` action |
+| `supabase/config.toml` | Add new function entry |
+
+No database changes needed — all existing tables and RLS policies support these features.
 
