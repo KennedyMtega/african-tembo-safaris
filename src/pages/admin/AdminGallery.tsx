@@ -21,7 +21,7 @@ export default function AdminGallery() {
   // AI generation state
   const [aiPrompt, setAiPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [generatedImages, setGeneratedImages] = useState<{ image: string; crafted_prompt: string }[]>([]);
   const [savingAi, setSavingAi] = useState<number | null>(null);
 
   const { data: items = [], isLoading } = useQuery({
@@ -78,13 +78,13 @@ export default function AdminGallery() {
         `${aiPrompt}, different angle, vibrant colors`,
         `${aiPrompt}, dramatic lighting, wide shot`,
       ];
-      const results: string[] = [];
+      const results: { image: string; crafted_prompt: string }[] = [];
       for (const prompt of variations) {
         const { data, error } = await supabase.functions.invoke("generate-gallery-image", {
           body: { prompt },
         });
         if (error) throw error;
-        if (data?.image) results.push(data.image);
+        if (data?.image) results.push({ image: data.image, crafted_prompt: data.crafted_prompt || "" });
       }
       setGeneratedImages(results);
       if (results.length > 0) toast({ title: `Generated ${results.length} images` });
@@ -96,9 +96,10 @@ export default function AdminGallery() {
     }
   };
 
-  const saveGeneratedImage = async (base64: string, index: number) => {
+  const saveGeneratedImage = async (item: { image: string; crafted_prompt: string }, index: number) => {
     setSavingAi(index);
     try {
+      const base64 = item.image;
       const raw = base64.includes(",") ? base64.split(",")[1] : base64;
       const byteString = atob(raw);
       const ab = new ArrayBuffer(byteString.length);
@@ -173,10 +174,10 @@ export default function AdminGallery() {
           <CardHeader><CardTitle className="text-base">Generated Images — Click to add to gallery</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-3">
-              {generatedImages.map((img, i) => (
+              {generatedImages.map((item, i) => (
                 <div key={i} className="group relative overflow-hidden rounded-lg border border-border/50 transition-all hover:border-primary/50">
                   <img
-                    src={img.startsWith("data:") ? img : `data:image/png;base64,${img}`}
+                    src={item.image.startsWith("data:") ? item.image : `data:image/png;base64,${item.image}`}
                     alt={`Generated ${i + 1}`}
                     className="aspect-video w-full object-cover"
                   />
@@ -185,12 +186,17 @@ export default function AdminGallery() {
                       size="sm"
                       className="gap-1.5"
                       disabled={savingAi === i}
-                      onClick={() => saveGeneratedImage(img, i)}
+                      onClick={() => saveGeneratedImage(item, i)}
                     >
                       {savingAi === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                       {savingAi === i ? "Saving…" : "Add to Gallery"}
                     </Button>
                   </div>
+                  {item.crafted_prompt && (
+                    <div className="p-2 bg-muted/80">
+                      <p className="text-[10px] leading-tight text-muted-foreground line-clamp-3">{item.crafted_prompt}</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
