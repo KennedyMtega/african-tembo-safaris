@@ -97,6 +97,7 @@ export default function GalleryPage() {
                       src={item.url}
                       alt={item.title || "Safari gallery"}
                       loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
                       className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
