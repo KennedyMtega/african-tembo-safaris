@@ -96,6 +96,7 @@ const App = () => (
               <Route path="/admin/packages/new" element={<AdminPackageForm />} />
               <Route path="/admin/packages/:id/edit" element={<AdminPackageForm />} />
               <Route path="/admin/bookings" element={<AdminBookings />} />
+              <Route path="/admin/bookings/calendar" element={<AdminBookingCalendar />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/payments" element={<AdminPayments />} />
               <Route path="/admin/destinations" element={<AdminDestinations />} />

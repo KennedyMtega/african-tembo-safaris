@@ -81,7 +81,12 @@ export default function AdminBookings() {
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" className="gap-1.5 ml-auto" onClick={exportCSV}>
+        <Link to="/admin/bookings/calendar" className="ml-auto">
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5" /> Calendar
+          </Button>
+        </Link>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={exportCSV}>
           <Download className="h-3.5 w-3.5" /> Export CSV
         </Button>
       </div>

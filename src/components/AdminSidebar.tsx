@@ -25,6 +25,7 @@ const sections = [
     links: [
       { to: "/admin/packages", label: "Packages", icon: Package },
       { to: "/admin/bookings", label: "Bookings", icon: CalendarCheck },
+      { to: "/admin/bookings/calendar", label: "Calendar", icon: CalendarDays },
       { to: "/admin/users", label: "Users", icon: Users },
       { to: "/admin/payments", label: "Payments", icon: CreditCard },
     ],
