@@ -21,7 +21,7 @@ export default function AdminGallery() {
   // AI generation state
   const [aiPrompt, setAiPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [generatedImages, setGeneratedImages] = useState<{ image: string; crafted_prompt: string }[]>([]);
   const [savingAi, setSavingAi] = useState<number | null>(null);
 
   const { data: items = [], isLoading } = useQuery({
