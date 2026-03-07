@@ -4,6 +4,7 @@ import { packageService } from "@/services/packageService";
 import { PackageCard } from "@/components/PackageCard";
 import { PackageFilters } from "@/components/PackageFilters";
 import { useQuery } from "@tanstack/react-query";
+import SEOHead from "@/components/SEOHead";
 
 export default function PackagesPage() {
   const [search, setSearch] = useState("");

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { galleryService, type GalleryItem } from "@/services/galleryService";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
+import SEOHead from "@/components/SEOHead";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];

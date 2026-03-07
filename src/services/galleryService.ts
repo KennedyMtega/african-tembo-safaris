@@ -56,6 +56,11 @@ export const galleryService = {
     if (error) throw error;
   },
 
+  async updateTitle(id: string, title: string): Promise<void> {
+    const { error } = await supabase.from("gallery_items").update({ title }).eq("id", id);
+    if (error) throw error;
+  },
+
   async uploadFile(file: File): Promise<string> {
     const ext = file.name.split(".").pop();
     const path = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;

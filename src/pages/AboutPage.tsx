@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Footprints, Heart, Leaf, Eye, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import SEOHead from "@/components/SEOHead";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
