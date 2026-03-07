@@ -18,18 +18,18 @@ const fallback = "/placeholder.svg";
 
 const slideLeft = {
   hidden: { opacity: 0, x: -60 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.7, ease: "easeOut" } },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.7, ease: [0, 0, 0.2, 1] as const } },
 };
 const slideRight = {
   hidden: { opacity: 0, x: 60 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.7, ease: "easeOut" } },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.7, ease: [0, 0, 0.2, 1] as const } },
 };
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.15, duration: 0.6, ease: "easeOut" },
+    transition: { delay: i * 0.15, duration: 0.6, ease: [0, 0, 0.2, 1] as const },
   }),
 };
 const scaleIn = {
@@ -37,7 +37,7 @@ const scaleIn = {
   visible: (i: number) => ({
     opacity: 1,
     scale: 1,
-    transition: { delay: i * 0.12, duration: 0.5, ease: "easeOut" },
+    transition: { delay: i * 0.12, duration: 0.5, ease: [0, 0, 0.2, 1] as const },
   }),
 };
 
