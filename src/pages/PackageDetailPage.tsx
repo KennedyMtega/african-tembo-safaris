@@ -38,7 +38,7 @@ export default function PackageDetailPage() {
           <div className="lg:col-span-2 space-y-8">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="overflow-hidden rounded-lg">
-                <img src={mainImage} alt={pkg.title} className="h-72 w-full object-cover md:h-96" />
+                <img src={mainImage} alt={pkg.title} className="h-72 w-full object-cover md:h-96" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
               </div>
               {thumbs.length > 0 && (
                 <div className="mt-3 flex gap-3">
