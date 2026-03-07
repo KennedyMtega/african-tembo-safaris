@@ -86,6 +86,7 @@ export type Database = {
         Row: {
           booking_ref: string
           created_at: string
+          deposit_amount: number | null
           end_date: string
           id: string
           package_id: string
@@ -99,6 +100,7 @@ export type Database = {
         Insert: {
           booking_ref: string
           created_at?: string
+          deposit_amount?: number | null
           end_date: string
           id?: string
           package_id: string
@@ -112,6 +114,7 @@ export type Database = {
         Update: {
           booking_ref?: string
           created_at?: string
+          deposit_amount?: number | null
           end_date?: string
           id?: string
           package_id?: string
