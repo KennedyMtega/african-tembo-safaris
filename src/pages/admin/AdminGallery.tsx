@@ -60,6 +60,7 @@ export default function AdminGallery() {
     try {
       await galleryService.remove(id);
       queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
+      queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
       toast({ title: "Item deleted" });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
