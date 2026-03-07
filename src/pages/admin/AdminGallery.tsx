@@ -217,7 +217,7 @@ export default function AdminGallery() {
                 {item.type === "video" ? (
                   <video src={item.url} muted loop className="h-full w-full object-cover" />
                 ) : (
-                  <img src={item.url} alt={item.title || "Gallery"} className="h-full w-full object-cover" />
+                  <img src={item.url} alt={item.title || "Gallery"} onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} className="h-full w-full object-cover" />
                 )}
                 <div className="absolute left-2 top-2">
                   {item.type === "video" ? <Video className="h-4 w-4 text-primary-foreground drop-shadow" /> : <Image className="h-4 w-4 text-primary-foreground drop-shadow" />}
