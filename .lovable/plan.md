@@ -1,98 +1,42 @@
 
 
-# Settings Restructure, Gallery AI Images, and KB Document Upload
+# Fix Gallery & Image Visibility Issues
 
-## Overview
-Four main changes: (1) Split the Settings page into tabbed sub-sections, (2) Generate AI images for the gallery, (3) Add document upload to the Knowledge Base AI assistant.
+## Problem
 
----
+1. **Gallery is empty** — the `gallery_items` table has 0 rows. AI-generated images were saved to `site-media` storage for the hero section, but were never inserted into `gallery_items`. The admin gallery and public gallery both show "No gallery items yet."
 
-## 1. Settings Page — Tabbed Layout
+2. **Hero image works** — the `hero_media` site setting correctly points to a Supabase storage URL (`site-media/hero/ai-1772588544331.png`), so the hero section should be displaying fine. If it's not showing, it may be a storage RLS/public bucket issue (the bucket is public, so this should work).
 
-**File: `src/pages/admin/AdminSettings.tsx`**
+3. **No seeded gallery content** — the system relies entirely on manual uploads or AI generation + "Add to Gallery" clicks. There's no auto-population.
 
-Replace the single scrolling page with a horizontal tab navigation at the top. Each section gets its own tab:
+## Root Cause
 
-- **Company Profile** — Company name, email, phone, address, system (currency/timezone), notifications
-- **Team Management** — Employee list, invite dialog, role management
-- **Hero Section** — Hero media mode toggle, image/video upload, save (keep all existing upload functionality intact)
-- **AI Configuration** — Provider selection, API keys
-- **Social Media** — Social links form
+The gallery was set up correctly in code, but no images were ever saved to the `gallery_items` table. The AI generation flow in `AdminGallery.tsx` works (generate → click "Add to Gallery" → upload to storage → insert into `gallery_items`), but the user hasn't gone through that flow yet. The hero AI images went to `site_settings` not `gallery_items`.
 
-Each tab renders only its own content, eliminating the endless scroll. All existing state and logic remains the same, just reorganized into `TabsContent` blocks using the existing Radix Tabs component.
+## Plan
 
----
+### 1. Seed gallery with existing package images (SQL INSERT)
 
-## 2. Gallery — AI-Generated Images
+Use the package images (which are already working Unsplash URLs) to populate `gallery_items` so both admin and public galleries have content immediately. Insert ~15 images from the 5 packages with descriptive titles.
 
-**File: `src/pages/admin/AdminGallery.tsx`**
+### 2. Also seed the two AI-generated hero images into the gallery
 
-Add a "Generate with AI" section alongside the existing upload form:
-- Text prompt input (e.g., "African elephant at sunset in the Serengeti")
-- "Generate" button that calls a new edge function
-- Shows 3 generated image previews the admin can select from
-- Selected images get uploaded to the `site-media` bucket and saved to `gallery_items` table
-- Existing manual upload remains untouched
+The two images in `site-media` storage (`hero/ai-1772588544331.png` and `hero/ai-1772588541993.png`) should also be inserted into `gallery_items` so they appear in the gallery.
 
-**File: `supabase/functions/generate-gallery-image/index.ts`** (new)
+### 3. Add `onError` fallback to gallery image tags
 
-Edge function that:
-- Takes a prompt string
-- Calls Lovable AI Gateway with `google/gemini-2.5-flash-image` model and `modalities: ["image", "text"]`
-- Returns base64 image data
-- Called 3 times (or 3 prompts with variations) to produce 3 options
-- The frontend uploads the selected base64 image to Supabase storage
+Update `GalleryPage.tsx` and `AdminGallery.tsx` img tags with `onError` fallback to `/placeholder.svg` to prevent broken images in the future.
 
-**File: `supabase/config.toml`** — Add `[functions.generate-gallery-image]` with `verify_jwt = false`
+### 4. Invalidate both gallery query keys
 
-The gallery items are already visible on the public `/gallery` page via `galleryService.getAll()` with the existing `Public read gallery` RLS policy, so no changes needed there.
+Ensure `admin-gallery` and `gallery-public` query keys stay in sync by invalidating both when changes are made in `AdminGallery.tsx`.
 
----
+## Files Changed
 
-## 3. Hero Section — Design Presets
-
-Within the Hero Section tab in settings, add a "Generate Hero Designs" feature:
-- Button to generate 3 AI hero images with safari-themed prompts
-- Shows 3 preview cards the admin can click to select
-- Selecting one sets it as `heroImageUrl` (same flow as current upload)
-- The existing upload functionality (image and video) remains fully intact alongside this
-
-Uses the same `generate-gallery-image` edge function with different prompts.
-
----
-
-## 4. Knowledge Base — Document Upload + AI Processing
-
-**File: `src/pages/admin/AdminKnowledgeBase.tsx`**
-
-Add a new section in the AI Assistant tab:
-- **"Upload Document"** card with a file input (accepts `.txt`, `.md`, `.pdf`, `.docx`)
-- On upload, reads the file content client-side (for text files via FileReader; for PDF/DOCX, extracts text client-side or sends raw to edge function)
-- Sends the extracted text to the existing `kb-assistant` edge function with action `"generate"` and the document content as the prompt
-- AI processes the document, structures it into a proper KB article (title, content, category, tags)
-- Auto-fills the editor form fields
-- Admin reviews and clicks Save
-
-**File: `supabase/functions/kb-assistant/index.ts`**
-
-Add a new action `"from_document"`:
-- Receives raw document text
-- System prompt instructs AI to extract key information, organize it into a well-structured KB article
-- Improve and clean up content only when necessary (as requested)
-- Returns structured article data via the same `save_article` tool call pattern
-
----
-
-## Technical Summary
-
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/pages/admin/AdminSettings.tsx` | Restructure into 5 tabs |
-| `src/pages/admin/AdminGallery.tsx` | Add AI image generation UI |
-| `src/pages/admin/AdminKnowledgeBase.tsx` | Add document upload in AI tab |
-| `supabase/functions/generate-gallery-image/index.ts` | New — AI image generation |
-| `supabase/functions/kb-assistant/index.ts` | Add `from_document` action |
-| `supabase/config.toml` | Add new function entry |
-
-No database changes needed — all existing tables and RLS policies support these features.
+| SQL (insert tool) | Insert ~17 rows into `gallery_items` using package images + storage hero images |
+| `src/pages/GalleryPage.tsx` | Add `onError` fallback to img tags |
+| `src/pages/admin/AdminGallery.tsx` | Add `onError` fallback, invalidate both query keys on changes |
 
