@@ -87,20 +87,36 @@ export default function AdminGallery() {
     queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
   };
 
+  const titleFromFilename = (name: string) => {
+    const base = name.replace(/\.[^.]+$/, "");
+    return base
+      .replace(/[-_]+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim();
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
     setUploading(true);
+    const fileArr = Array.from(files);
     try {
-      for (const file of Array.from(files)) {
+      for (let idx = 0; idx < fileArr.length; idx++) {
+        const file = fileArr[idx];
         const isVideo = file.type.startsWith("video/");
         if (isVideo && file.size > 50 * 1024 * 1024) {
           toast({ title: "Video too large", description: "Max 50MB per video", variant: "destructive" });
           continue;
         }
+        let itemTitle: string;
+        if (title) {
+          itemTitle = fileArr.length > 1 ? `${title} ${idx + 1}` : title;
+        } else {
+          itemTitle = titleFromFilename(file.name);
+        }
         const processed = isVideo ? file : await compressImage(file);
         const url = await galleryService.uploadFile(processed);
-        await galleryService.create({ title: title || undefined, type: isVideo ? "video" : "image", url });
+        await galleryService.create({ title: itemTitle, type: isVideo ? "video" : "image", url });
       }
       toast({ title: "Uploaded successfully" });
       invalidate();
