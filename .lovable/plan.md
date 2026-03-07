@@ -1,47 +1,98 @@
 
 
-# Favicon, Remove Lovable Branding, Rewrite README
+# Settings Restructure, Gallery AI Images, and KB Document Upload
 
-## 1. Use Tembo Logo as Browser Favicon
+## Overview
+Four main changes: (1) Split the Settings page into tabbed sub-sections, (2) Generate AI images for the gallery, (3) Add document upload to the Knowledge Base AI assistant.
 
-The existing logo is at `src/assets/tembo-logo.jpg`. Since it's a JPG in the `src/` directory, we need to copy it to `public/` and reference it in `index.html` as the favicon. The current favicon is `public/favicon.ico` (the default Lovable icon).
+---
 
-**Change:** Update `index.html` to use the Tembo logo as favicon by adding a `<link rel="icon">` pointing to the logo file. We'll copy the logo to `public/favicon.jpg` and reference it.
+## 1. Settings Page — Tabbed Layout
 
-## 2. Remove All Public-Facing Lovable References
+**File: `src/pages/admin/AdminSettings.tsx`**
 
-Only `index.html` has visible Lovable branding. The edge functions use `LOVABLE_API_KEY` internally — those are backend-only and not visible to users, so they stay.
+Replace the single scrolling page with a horizontal tab navigation at the top. Each section gets its own tab:
 
-**Changes to `index.html`:**
-- Title: `"Lovable App"` → `"African Tembo Safari | Authentic Tanzania Safari Experiences"`
-- Description: `"Lovable Generated Project"` → `"Curated safari experiences through Tanzania's most iconic wildlife destinations. Serengeti, Ngorongoro, Kilimanjaro, Zanzibar and more."`
-- Author: `"Lovable"` → `"African Tembo Safari"`
-- og:title, og:description: Update to match
-- og:image, twitter:image: Remove the Lovable opengraph URLs (set to empty or remove)
-- twitter:site: Remove `@Lovable`
-- Remove TODO comments
+- **Company Profile** — Company name, email, phone, address, system (currency/timezone), notifications
+- **Team Management** — Employee list, invite dialog, role management
+- **Hero Section** — Hero media mode toggle, image/video upload, save (keep all existing upload functionality intact)
+- **AI Configuration** — Provider selection, API keys
+- **Social Media** — Social links form
 
-## 3. Rewrite README with Project Knowledge
+Each tab renders only its own content, eliminating the endless scroll. All existing state and logic remains the same, just reorganized into `TabsContent` blocks using the existing Radix Tabs component.
 
-Replace the entire README with comprehensive documentation covering:
+---
 
-- **Project name & description**: African Tembo Safari — a full-stack safari booking platform
-- **Tech stack**: React, Vite, TypeScript, Tailwind CSS, shadcn/ui, Supabase (auth, database, storage, edge functions)
-- **Features overview**:
-  - Public site: Package browsing, destination pages, gallery, booking flow with 50% deposit, AI chatbot, responsive design
-  - Customer portal: Dashboard, bookings, wishlist, profile
-  - Admin panel: Dashboard, analytics, package CRUD, booking management + calendar view, user management, payments, CRM, gallery (AI image generation), knowledge base, reviews, inquiries, reports, activity log, settings
-- **Safari packages**: 5 Tanzanian packages (Serengeti Migration, Ngorongoro Cultural, Zanzibar Beach, Kilimanjaro Trek, Northern Circuit Grand Safari)
-- **Key integrations**: Supabase auth, storage, edge functions (AI chat, image generation, booking notifications, recommendation engine)
-- **Getting started**: Clone, install, run
-- **Environment variables**: Supabase URL/key needed
-- **Project structure**: Brief overview of `src/pages`, `src/services`, `src/components`, `supabase/functions`
+## 2. Gallery — AI-Generated Images
 
-## Files Changed
+**File: `src/pages/admin/AdminGallery.tsx`**
 
-| File | Change |
+Add a "Generate with AI" section alongside the existing upload form:
+- Text prompt input (e.g., "African elephant at sunset in the Serengeti")
+- "Generate" button that calls a new edge function
+- Shows 3 generated image previews the admin can select from
+- Selected images get uploaded to the `site-media` bucket and saved to `gallery_items` table
+- Existing manual upload remains untouched
+
+**File: `supabase/functions/generate-gallery-image/index.ts`** (new)
+
+Edge function that:
+- Takes a prompt string
+- Calls Lovable AI Gateway with `google/gemini-2.5-flash-image` model and `modalities: ["image", "text"]`
+- Returns base64 image data
+- Called 3 times (or 3 prompts with variations) to produce 3 options
+- The frontend uploads the selected base64 image to Supabase storage
+
+**File: `supabase/config.toml`** — Add `[functions.generate-gallery-image]` with `verify_jwt = false`
+
+The gallery items are already visible on the public `/gallery` page via `galleryService.getAll()` with the existing `Public read gallery` RLS policy, so no changes needed there.
+
+---
+
+## 3. Hero Section — Design Presets
+
+Within the Hero Section tab in settings, add a "Generate Hero Designs" feature:
+- Button to generate 3 AI hero images with safari-themed prompts
+- Shows 3 preview cards the admin can click to select
+- Selecting one sets it as `heroImageUrl` (same flow as current upload)
+- The existing upload functionality (image and video) remains fully intact alongside this
+
+Uses the same `generate-gallery-image` edge function with different prompts.
+
+---
+
+## 4. Knowledge Base — Document Upload + AI Processing
+
+**File: `src/pages/admin/AdminKnowledgeBase.tsx`**
+
+Add a new section in the AI Assistant tab:
+- **"Upload Document"** card with a file input (accepts `.txt`, `.md`, `.pdf`, `.docx`)
+- On upload, reads the file content client-side (for text files via FileReader; for PDF/DOCX, extracts text client-side or sends raw to edge function)
+- Sends the extracted text to the existing `kb-assistant` edge function with action `"generate"` and the document content as the prompt
+- AI processes the document, structures it into a proper KB article (title, content, category, tags)
+- Auto-fills the editor form fields
+- Admin reviews and clicks Save
+
+**File: `supabase/functions/kb-assistant/index.ts`**
+
+Add a new action `"from_document"`:
+- Receives raw document text
+- System prompt instructs AI to extract key information, organize it into a well-structured KB article
+- Improve and clean up content only when necessary (as requested)
+- Returns structured article data via the same `save_article` tool call pattern
+
+---
+
+## Technical Summary
+
+| File | Action |
 |------|--------|
-| `index.html` | Replace all Lovable branding with African Tembo Safari metadata, add favicon link |
-| `public/favicon.jpg` | Copy from `src/assets/tembo-logo.jpg` |
-| `README.md` | Complete rewrite with project documentation |
+| `src/pages/admin/AdminSettings.tsx` | Restructure into 5 tabs |
+| `src/pages/admin/AdminGallery.tsx` | Add AI image generation UI |
+| `src/pages/admin/AdminKnowledgeBase.tsx` | Add document upload in AI tab |
+| `supabase/functions/generate-gallery-image/index.ts` | New — AI image generation |
+| `supabase/functions/kb-assistant/index.ts` | Add `from_document` action |
+| `supabase/config.toml` | Add new function entry |
+
+No database changes needed — all existing tables and RLS policies support these features.
 

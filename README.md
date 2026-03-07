@@ -1,73 +1,99 @@
-# Welcome to your Lovable project
+# African Tembo Safari
 
-## Project info
+A full-stack safari booking platform for authentic Tanzanian wildlife experiences. Built with React, Supabase, and AI-powered features.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Tech Stack
 
-## How can I edit this code?
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, Framer Motion
+- **Backend**: Supabase (PostgreSQL, Auth, Storage, Edge Functions)
+- **AI**: Supabase Edge Functions with AI gateway for chatbot, image generation, recommendations
 
-There are several ways of editing your application.
+## Features
 
-**Use Lovable**
+### Public Site
+- Browse 5 curated safari packages (Serengeti Migration, Ngorongoro Cultural, Zanzibar Beach, Kilimanjaro Trek, Northern Circuit Grand Safari)
+- Destination pages with detailed itineraries, highlights, inclusions/exclusions
+- Photo gallery with AI-generated and uploaded images
+- Booking flow with 50% deposit payment system
+- AI-powered chatbot for visitor questions
+- Responsive design for all devices
+- FAQ, About, Contact, Privacy, and Terms pages
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Customer Portal
+- Dashboard with booking overview
+- Booking history and status tracking
+- Wishlist for saved packages
+- Profile management
 
-Changes made via Lovable will be committed automatically to this repo.
+### Admin Panel
+- **Dashboard**: Key metrics, recent bookings, activity overview
+- **Analytics**: Revenue charts, booking trends, visitor insights
+- **Packages**: Full CRUD with itinerary builder, image management
+- **Bookings**: List view + calendar view, status management
+- **Payments**: Payment tracking and status updates
+- **Users**: User management with role-based access (admin, management, user)
+- **CRM**: Contact management, interaction tracking, tags
+- **Gallery**: Image upload + AI image generation (via edge function)
+- **Knowledge Base**: Article management with AI assistant for content generation and document processing
+- **Reviews**: Moderation with approve/reject/feature workflow
+- **Inquiries**: Priority-based inquiry management
+- **Reports**: Exportable business reports
+- **Activity Log**: Audit trail of admin actions
+- **Settings**: Company profile, team management, hero section config, AI configuration, social media links
 
-**Use your preferred IDE**
+## Supabase Edge Functions
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+| Function | Purpose |
+|----------|---------|
+| `ai-chat` | AI chatbot for visitor questions |
+| `generate-gallery-image` | AI image generation for gallery and hero |
+| `kb-assistant` | Knowledge base article generation and document processing |
+| `recommendation-engine` | Package recommendations based on preferences |
+| `booking-notification` | Email notifications for booking events |
+| `review-notification` | Notifications for new reviews |
+| `create-employee` | Admin user creation with role assignment |
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Getting Started
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+```bash
+# Clone the repository
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Environment Variables
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| Variable | Description |
+|----------|-------------|
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anonymous/public key |
 
-**Use GitHub Codespaces**
+## Project Structure
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```
+src/
+├── components/       # Reusable UI components (Navbar, Footer, ChatWidget, etc.)
+├── contexts/         # React contexts (AuthContext)
+├── hooks/            # Custom hooks
+├── pages/
+│   ├── admin/        # Admin panel pages
+│   ├── auth/         # Authentication pages
+│   └── customer/     # Customer portal pages
+├── services/         # Supabase data access layer
+├── types/            # TypeScript type definitions
+└── integrations/     # Supabase client configuration
 
-## What technologies are used for this project?
+supabase/
+├── functions/        # Edge functions (AI chat, image gen, notifications)
+└── migrations/       # Database schema migrations
+```
 
-This project is built with:
+## Database Tables
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+`packages`, `package_itinerary`, `destinations`, `bookings`, `booking_travelers`, `payments`, `profiles`, `user_roles`, `reviews`, `gallery_items`, `inquiries`, `knowledge_base`, `crm_contacts`, `crm_interactions`, `chat_conversations`, `chat_messages`, `notifications`, `activity_log`, `wishlists`, `site_settings`
