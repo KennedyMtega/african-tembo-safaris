@@ -39,6 +39,7 @@ import AdminReports from "@/pages/admin/AdminReports";
 import AdminGallery from "@/pages/admin/AdminGallery";
 import AdminKnowledgeBase from "@/pages/admin/AdminKnowledgeBase";
 import AdminCRM from "@/pages/admin/AdminCRM";
+import AdminBookingCalendar from "@/pages/admin/AdminBookingCalendar";
 import GalleryPage from "@/pages/GalleryPage";
 import CustomerDashboard from "@/pages/customer/CustomerDashboard";
 import CustomerBookings from "@/pages/customer/CustomerBookings";
