@@ -46,6 +46,7 @@ export default function AdminGallery() {
       }
       toast({ title: "Uploaded successfully" });
       queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
+      queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
       setTitle("");
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
