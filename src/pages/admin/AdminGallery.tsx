@@ -112,6 +112,7 @@ export default function AdminGallery() {
       const url = await galleryService.uploadFile(file);
       await galleryService.create({ title: aiPrompt.slice(0, 100) || "AI Generated", type: "image", url });
       queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
+      queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
       toast({ title: "Image saved to gallery" });
       setGeneratedImages((prev) => prev.filter((_, i) => i !== index));
     } catch (err: any) {
