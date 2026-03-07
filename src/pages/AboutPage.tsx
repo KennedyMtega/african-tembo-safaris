@@ -293,16 +293,14 @@ export default function AboutPage() {
                 whileInView="visible"
                 viewport={{ once: true, margin: "-60px" }}
               >
-                <Card className="group h-full overflow-hidden border-border/50 transition-shadow duration-300 hover:shadow-lg">
-                  <div className="overflow-hidden bg-secondary/30">
-                    <img
-                      src={item.img}
-                      alt={item.title}
-                      onError={(e) => { (e.target as HTMLImageElement).src = fallback; }}
-                      className="h-52 w-full object-contain transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  </div>
+                <div className="group h-full">
+                  <img
+                    src={item.img}
+                    alt={item.title}
+                    onError={(e) => { (e.target as HTMLImageElement).src = fallback; }}
+                    className="h-52 w-full object-contain drop-shadow-xl transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
                   <CardContent className="p-6">
                     <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                       <item.icon className="h-4 w-4 text-primary" />
