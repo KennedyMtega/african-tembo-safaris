@@ -1,98 +1,64 @@
 
 
-# Settings Restructure, Gallery AI Images, and KB Document Upload
+# OG Image Generation, SEO Enhancement, and Gallery Title Editing
 
-## Overview
-Four main changes: (1) Split the Settings page into tabbed sub-sections, (2) Generate AI images for the gallery, (3) Add document upload to the Knowledge Base AI assistant.
+## 1. Generate OG Social Share Image
 
----
+Use the `generate-gallery-image` edge function to create a branded OG image, then upload it to `site-media` storage and reference it in `index.html`.
 
-## 1. Settings Page — Tabbed Layout
+**Approach:** Create a new edge function call via the existing `generate-gallery-image` function with a safari-branded prompt. Upload the resulting image to `site-media/og/og-image.png`. Then hardcode the public URL in `index.html`.
 
-**File: `src/pages/admin/AdminSettings.tsx`**
+Since we can't call the edge function during build, we'll generate the image by creating a simple admin action, but more practically: we'll use a high-quality Unsplash image as the OG image (reliable, always available) and upload it to storage via a migration-time approach. Actually, the simplest approach: reference the hero safari image already in the project (`src/assets/hero-safari.jpg`) by copying it to `public/og-image.jpg` and referencing it with a full URL pattern in the metadata.
 
-Replace the single scrolling page with a horizontal tab navigation at the top. Each section gets its own tab:
+**Files:** `public/og-image.jpg` (copy from hero-safari.jpg), `index.html`
 
-- **Company Profile** — Company name, email, phone, address, system (currency/timezone), notifications
-- **Team Management** — Employee list, invite dialog, role management
-- **Hero Section** — Hero media mode toggle, image/video upload, save (keep all existing upload functionality intact)
-- **AI Configuration** — Provider selection, API keys
-- **Social Media** — Social links form
+## 2. Comprehensive SEO Metadata in `index.html`
 
-Each tab renders only its own content, eliminating the endless scroll. All existing state and logic remains the same, just reorganized into `TabsContent` blocks using the existing Radix Tabs component.
+Add extensive metadata:
+- `og:url`, `og:site_name`, `og:locale`, `og:image` with dimensions
+- `twitter:title`, `twitter:description`, `twitter:image`
+- Structured data (JSON-LD) for `TravelAgency` schema
+- Additional meta: `robots`, `keywords`, `theme-color`, `canonical` (relative)
+- `geo.region`, `geo.placename` for Tanzania
+- Apple touch icon
 
----
+## 3. SEO Component for Per-Page Metadata
 
-## 2. Gallery — AI-Generated Images
+Create a reusable `SEOHead` component using `document.title` and meta tag manipulation for key pages (packages, destinations, about, etc.) so each page has unique title/description for better indexing.
 
-**File: `src/pages/admin/AdminGallery.tsx`**
+**Files:** `src/components/SEOHead.tsx`, update key pages to use it
 
-Add a "Generate with AI" section alongside the existing upload form:
-- Text prompt input (e.g., "African elephant at sunset in the Serengeti")
-- "Generate" button that calls a new edge function
-- Shows 3 generated image previews the admin can select from
-- Selected images get uploaded to the `site-media` bucket and saved to `gallery_items` table
-- Existing manual upload remains untouched
+## 4. Sitemap and robots.txt Enhancement
 
-**File: `supabase/functions/generate-gallery-image/index.ts`** (new)
+Update `robots.txt` to include sitemap reference. Create a static `public/sitemap.xml` with all known routes.
 
-Edge function that:
-- Takes a prompt string
-- Calls Lovable AI Gateway with `google/gemini-2.5-flash-image` model and `modalities: ["image", "text"]`
-- Returns base64 image data
-- Called 3 times (or 3 prompts with variations) to produce 3 options
-- The frontend uploads the selected base64 image to Supabase storage
+**Files:** `public/robots.txt`, `public/sitemap.xml`
 
-**File: `supabase/config.toml`** — Add `[functions.generate-gallery-image]` with `verify_jwt = false`
+## 5. Gallery Title Editing in Admin
 
-The gallery items are already visible on the public `/gallery` page via `galleryService.getAll()` with the existing `Public read gallery` RLS policy, so no changes needed there.
+Add inline editing capability to gallery items in `AdminGallery.tsx`:
+- Each gallery card gets a pencil/edit icon next to the title
+- Clicking it shows an inline input field to rename
+- Save updates the `gallery_items` table via a new `galleryService.updateTitle()` method
 
----
+**Files:** `src/pages/admin/AdminGallery.tsx`, `src/services/galleryService.ts`
 
-## 3. Hero Section — Design Presets
+## Summary of All File Changes
 
-Within the Hero Section tab in settings, add a "Generate Hero Designs" feature:
-- Button to generate 3 AI hero images with safari-themed prompts
-- Shows 3 preview cards the admin can click to select
-- Selecting one sets it as `heroImageUrl` (same flow as current upload)
-- The existing upload functionality (image and video) remains fully intact alongside this
-
-Uses the same `generate-gallery-image` edge function with different prompts.
-
----
-
-## 4. Knowledge Base — Document Upload + AI Processing
-
-**File: `src/pages/admin/AdminKnowledgeBase.tsx`**
-
-Add a new section in the AI Assistant tab:
-- **"Upload Document"** card with a file input (accepts `.txt`, `.md`, `.pdf`, `.docx`)
-- On upload, reads the file content client-side (for text files via FileReader; for PDF/DOCX, extracts text client-side or sends raw to edge function)
-- Sends the extracted text to the existing `kb-assistant` edge function with action `"generate"` and the document content as the prompt
-- AI processes the document, structures it into a proper KB article (title, content, category, tags)
-- Auto-fills the editor form fields
-- Admin reviews and clicks Save
-
-**File: `supabase/functions/kb-assistant/index.ts`**
-
-Add a new action `"from_document"`:
-- Receives raw document text
-- System prompt instructs AI to extract key information, organize it into a well-structured KB article
-- Improve and clean up content only when necessary (as requested)
-- Returns structured article data via the same `save_article` tool call pattern
-
----
-
-## Technical Summary
-
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/pages/admin/AdminSettings.tsx` | Restructure into 5 tabs |
-| `src/pages/admin/AdminGallery.tsx` | Add AI image generation UI |
-| `src/pages/admin/AdminKnowledgeBase.tsx` | Add document upload in AI tab |
-| `supabase/functions/generate-gallery-image/index.ts` | New — AI image generation |
-| `supabase/functions/kb-assistant/index.ts` | Add `from_document` action |
-| `supabase/config.toml` | Add new function entry |
-
-No database changes needed — all existing tables and RLS policies support these features.
+| `public/og-image.jpg` | Copy from hero-safari.jpg as OG share image |
+| `index.html` | Full SEO metadata: OG, Twitter, JSON-LD structured data, geo, keywords, theme-color |
+| `public/robots.txt` | Add sitemap reference |
+| `public/sitemap.xml` | Static sitemap with all public routes |
+| `src/components/SEOHead.tsx` | New reusable component for per-page title/meta |
+| `src/pages/HomePage.tsx` | Add SEOHead |
+| `src/pages/PackagesPage.tsx` | Add SEOHead |
+| `src/pages/AboutPage.tsx` | Add SEOHead |
+| `src/pages/ContactPage.tsx` | Add SEOHead |
+| `src/pages/DestinationsPage.tsx` | Add SEOHead |
+| `src/pages/GalleryPage.tsx` | Add SEOHead |
+| `src/pages/PackageDetailPage.tsx` | Add dynamic SEOHead with package title |
+| `src/pages/admin/AdminGallery.tsx` | Add inline title editing for gallery items |
+| `src/services/galleryService.ts` | Add `updateTitle()` method |
 
