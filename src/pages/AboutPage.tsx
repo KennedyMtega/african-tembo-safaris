@@ -301,14 +301,14 @@ export default function AboutPage() {
                     className="h-52 w-full object-contain drop-shadow-xl transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"
                   />
-                  <CardContent className="p-6">
+                  <div className="p-6 pt-4">
                     <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                       <item.icon className="h-4 w-4 text-primary" />
                     </div>
                     <h3 className="font-display font-semibold text-foreground">{item.title}</h3>
                     <p className="mt-2 text-sm text-muted-foreground">{item.desc}</p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
