@@ -78,13 +78,13 @@ export default function AdminGallery() {
         `${aiPrompt}, different angle, vibrant colors`,
         `${aiPrompt}, dramatic lighting, wide shot`,
       ];
-      const results: string[] = [];
+      const results: { image: string; crafted_prompt: string }[] = [];
       for (const prompt of variations) {
         const { data, error } = await supabase.functions.invoke("generate-gallery-image", {
           body: { prompt },
         });
         if (error) throw error;
-        if (data?.image) results.push(data.image);
+        if (data?.image) results.push({ image: data.image, crafted_prompt: data.crafted_prompt || "" });
       }
       setGeneratedImages(results);
       if (results.length > 0) toast({ title: `Generated ${results.length} images` });
