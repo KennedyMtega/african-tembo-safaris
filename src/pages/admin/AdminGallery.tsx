@@ -96,9 +96,10 @@ export default function AdminGallery() {
     }
   };
 
-  const saveGeneratedImage = async (base64: string, index: number) => {
+  const saveGeneratedImage = async (item: { image: string; crafted_prompt: string }, index: number) => {
     setSavingAi(index);
     try {
+      const base64 = item.image;
       const raw = base64.includes(",") ? base64.split(",")[1] : base64;
       const byteString = atob(raw);
       const ab = new ArrayBuffer(byteString.length);
