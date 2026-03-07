@@ -26,7 +26,7 @@ export function PackageCard({ pkg, index = 0 }: PackageCardProps) {
       <Link to={`/packages/${pkg.slug}`}>
         <Card className="group overflow-hidden border-border/50 transition-shadow hover:shadow-lg h-full">
           <div className="relative h-56 overflow-hidden">
-            <img src={pkg.images[0] || "/placeholder.svg"} alt={pkg.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <img src={pkg.images[0] || "/placeholder.svg"} alt={pkg.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
             <Badge className="absolute left-3 top-3 bg-primary text-primary-foreground">{pkg.destination}</Badge>
             <Badge variant="outline" className="absolute right-3 top-3 bg-background/80 text-foreground">{pkg.difficulty}</Badge>
           </div>

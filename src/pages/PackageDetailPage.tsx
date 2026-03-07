@@ -43,7 +43,7 @@ export default function PackageDetailPage() {
               {thumbs.length > 0 && (
                 <div className="mt-3 flex gap-3">
                   {thumbs.map((img, i) => (
-                    <img key={i} src={img} alt="" className="h-20 w-28 rounded-md object-cover border border-border" />
+                    <img key={i} src={img} alt="" className="h-20 w-28 rounded-md object-cover border border-border" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
                   ))}
                 </div>
               )}
