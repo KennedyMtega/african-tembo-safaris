@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Package, CalendarCheck, Users, CreditCard, LogOut,
   BarChart3, MapPin, Star, MessageSquare, Activity, Settings, FileText,
-  ChevronLeft, ChevronRight, GalleryHorizontalEnd, BookOpen, Contact,
+  ChevronLeft, ChevronRight, GalleryHorizontalEnd, BookOpen, Contact, CalendarDays,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
