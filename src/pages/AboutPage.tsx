@@ -7,6 +7,7 @@ import SEOHead from "@/components/SEOHead";
 
 import heroSafari from "@/assets/hero-safari.jpg";
 import savannaBg from "@/assets/about-savanna-bg.jpg";
+import founderPhoto from "@/assets/founder-photo.jpg";
 import connectionImg from "@/assets/about-connection.png";
 import footprintImg from "@/assets/about-footprint.png";
 import expertiseImg from "@/assets/about-expertise.png";
@@ -317,12 +318,12 @@ export default function AboutPage() {
 
       {/* ─── FOUNDER ─── */}
       <section className="bg-secondary/40 py-20 md:py-28">
-        <div className="container max-w-5xl">
+        <div className="container max-w-4xl">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mb-10 text-center font-display text-3xl font-bold text-foreground md:text-4xl"
+            className="mb-12 text-center font-display text-3xl font-bold text-foreground md:text-4xl"
           >
             Meet the Founder
           </motion.h2>
@@ -334,36 +335,45 @@ export default function AboutPage() {
             transition={{ duration: 0.7 }}
           >
             <Card className="overflow-hidden border-border/50">
-              <div className="flex flex-col md:flex-row">
-                <div className="relative w-full md:w-2/5">
+              {/* Savanna banner */}
+              <div className="relative h-40 w-full overflow-hidden md:h-48">
+                <img
+                  src={savannaBg}
+                  alt="Savanna backdrop"
+                  onError={(e) => { (e.target as HTMLImageElement).src = fallback; }}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[hsl(var(--deep-black)/0.55)]" />
+              </div>
+
+              {/* Content below banner */}
+              <div className="relative flex flex-col items-center px-8 pb-10 pt-0 text-center md:px-14">
+                {/* Circle portrait — overlaps the banner */}
+                <div className="relative -mt-16 mb-5 h-32 w-32 flex-shrink-0 overflow-hidden rounded-full border-4 border-background shadow-lg md:-mt-20 md:h-40 md:w-40">
                   <img
-                    src={savannaBg}
-                    alt="Savanna backdrop"
+                    src={founderPhoto}
+                    alt="Mohamedi Shabani Mgomi — Founder & CEO of African Tembo Safaris"
                     onError={(e) => { (e.target as HTMLImageElement).src = fallback; }}
-                    className="h-64 w-full object-cover md:h-full"
+                    className="h-full w-full object-cover object-top"
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--deep-black)/0.5)] to-transparent md:bg-gradient-to-r" />
-                  <div className="absolute bottom-4 left-4 md:bottom-6 md:left-6">
-                    <h3 className="font-display text-xl font-semibold text-primary-foreground">
-                      Mohamedi Shabani Mgomi
-                    </h3>
-                    <p className="text-sm font-medium text-primary-foreground/80">
-                      Founder &amp; CEO
-                    </p>
-                  </div>
                 </div>
-                <div className="flex flex-col justify-center p-8 md:w-3/5 md:p-10">
-                  <p className="text-sm text-muted-foreground italic leading-relaxed">
-                    "My journey didn't start in an office; it started under the vast African sky.
-                    Growing up with the red dust of the Savannah under my feet, I learned early on
-                    that the wild isn't just a place — it's a feeling. I founded African Tembo
-                    Safaris to bridge the gap between the luxury of a modern holiday and the raw,
-                    untamed spirit of my home. To me, every guest is more than a traveler; you are a
-                    storyteller in the making."
-                  </p>
-                  <p className="mt-4 text-xs text-muted-foreground">Based in Arusha, Tanzania</p>
-                </div>
+
+                <h3 className="font-display text-2xl font-semibold text-foreground">
+                  Mohamedi Shabani Mgomi
+                </h3>
+                <p className="mt-1 text-sm font-medium text-primary">Founder &amp; CEO</p>
+                <p className="mt-1 text-xs text-muted-foreground">Based in Arusha, Tanzania</p>
+
+                <blockquote className="mt-6 max-w-2xl text-sm text-muted-foreground italic leading-relaxed border-l-4 border-primary/40 pl-4 text-left">
+                  "My journey didn't start in an office; it started under the vast African sky.
+                  Growing up with the red dust of the Savannah under my feet, I learned early on
+                  that the wild isn't just a place — it's a feeling. I founded African Tembo
+                  Safaris to bridge the gap between the luxury of a modern holiday and the raw,
+                  untamed spirit of my home. To me, every guest is more than a traveler; you are a
+                  storyteller in the making."
+                </blockquote>
               </div>
             </Card>
           </motion.div>
