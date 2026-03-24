@@ -21,20 +21,6 @@ Your prompt MUST include ALL of the following:
 
 Output ONLY the prompt text as a single paragraph. No labels, no bullet points, no explanations.`;
 
-async function callGateway(
-  apiKey: string,
-  body: Record<string, unknown>,
-): Promise<Response> {
-  return await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -50,10 +36,10 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
+        JSON.stringify({ error: "GEMINI_API_KEY is not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -61,24 +47,23 @@ serve(async (req) => {
     // ── Step 1: Craft a professional photography prompt ──
     console.log("Step 1: Crafting prompt from user input:", prompt);
 
-    const promptResponse = await callGateway(LOVABLE_API_KEY, {
-      model: "google/gemini-3-flash-preview",
-      messages: [
-        { role: "system", content: PROMPT_ENGINEER_SYSTEM },
-        { role: "user", content: prompt },
-      ],
-    });
+    const promptResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: PROMPT_ENGINEER_SYSTEM }] },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+        }),
+      },
+    );
 
     if (!promptResponse.ok) {
       const status = promptResponse.status;
       if (status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds in Lovable workspace settings." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errText = await promptResponse.text();
@@ -89,7 +74,7 @@ serve(async (req) => {
     }
 
     const promptData = await promptResponse.json();
-    const craftedPrompt = promptData.choices?.[0]?.message?.content?.trim();
+    const craftedPrompt = promptData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
     if (!craftedPrompt) {
       console.error("No crafted prompt returned");
@@ -100,27 +85,26 @@ serve(async (req) => {
 
     console.log("Crafted prompt:", craftedPrompt.substring(0, 200) + "...");
 
-    // ── Step 2: Generate image with Banana Pro ──
-    console.log("Step 2: Generating image with gemini-3-pro-image-preview");
+    // ── Step 2: Generate image with Imagen 3 ──
+    console.log("Step 2: Generating image with Imagen 3");
 
-    const imageResponse = await callGateway(LOVABLE_API_KEY, {
-      model: "google/gemini-3-pro-image-preview",
-      messages: [
-        { role: "user", content: craftedPrompt },
-      ],
-      modalities: ["image", "text"],
-    });
+    const imageResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instances: [{ prompt: craftedPrompt }],
+          parameters: { sampleCount: 1, aspectRatio: "16:9" },
+        }),
+      },
+    );
 
     if (!imageResponse.ok) {
       const status = imageResponse.status;
       if (status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds in Lovable workspace settings." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errText = await imageResponse.text();
@@ -131,13 +115,16 @@ serve(async (req) => {
     }
 
     const imageData = await imageResponse.json();
-    const imageUrl = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const prediction = imageData.predictions?.[0];
 
-    if (!imageUrl) {
+    if (!prediction?.bytesBase64Encoded) {
       return new Response(JSON.stringify({ error: "No image was generated" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const mimeType = prediction.mimeType || "image/png";
+    const imageUrl = `data:${mimeType};base64,${prediction.bytesBase64Encoded}`;
 
     return new Response(JSON.stringify({ image: imageUrl, crafted_prompt: craftedPrompt }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

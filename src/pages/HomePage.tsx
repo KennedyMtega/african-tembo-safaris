@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Search, Star, Shield, Users, MapPin, Clock, ChevronRight, Footprints, Eye } from "lucide-react";
+import { useEffect, useState } from "react";
 import SEOHead from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import heroImageFallback from "@/assets/hero-safari.jpg";
 import { packageService } from "@/services/packageService";
 import { destinationService } from "@/services/destinationService";
 import { siteSettingsService, type HeroMedia } from "@/services/siteSettingsService";
+import { galleryService } from "@/services/galleryService";
 import { useQuery } from "@tanstack/react-query";
 
 const fadeUp = {
@@ -25,9 +27,23 @@ export default function HomePage() {
   const { data: featured = [] } = useQuery({ queryKey: ["packages-featured"], queryFn: () => packageService.getFeatured() });
   const { data: destinations = [] } = useQuery({ queryKey: ["destinations"], queryFn: () => destinationService.getAll() });
   const { data: heroMedia } = useQuery({ queryKey: ["hero-media"], queryFn: () => siteSettingsService.get<HeroMedia>("hero_media") });
+  const { data: heroGallery = [] } = useQuery({ queryKey: ["hero-slides"], queryFn: () => galleryService.getByUsage("hero") });
 
   const showVideo = heroMedia?.mode === "video" && heroMedia.videoUrl;
-  const heroSrc = heroMedia?.imageUrl || heroImageFallback;
+  const adminImage = heroMedia?.imageUrl;
+
+  // Build slides: gallery-tagged images first, then fallback to default
+  const slides = heroGallery.length > 0
+    ? heroGallery.map((item) => ({ src: item.url, alt: item.title || "African safari landscape" }))
+    : [{ src: heroImageFallback, alt: "African savanna at golden hour with elephants" }];
+
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  useEffect(() => {
+    if (showVideo || adminImage || slides.length <= 1) return;
+    const id = setInterval(() => setSlideIndex((i) => (i + 1) % slides.length), 5000);
+    return () => clearInterval(id);
+  }, [showVideo, adminImage, slides.length]);
 
   return (
     <>
@@ -36,10 +52,41 @@ export default function HomePage() {
       <section className="relative flex min-h-[85vh] items-center justify-center overflow-hidden">
         {showVideo ? (
           <video src={heroMedia!.videoUrl} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
+        ) : adminImage ? (
+          <img src={adminImage} alt="African safari landscape" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
-          <img src={heroSrc} alt="African savanna at golden hour with elephants" className="absolute inset-0 h-full w-full object-cover" />
+          <AnimatePresence mode="sync">
+            <motion.img
+              key={slideIndex}
+              src={slides[slideIndex].src}
+              alt={slides[slideIndex].alt}
+              initial={{ opacity: 0, scale: 1.04 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.2, ease: "easeInOut" }}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          </AnimatePresence>
         )}
+
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/40 to-foreground/20" />
+
+        {/* Slide indicator dots */}
+        {!showVideo && !adminImage && slides.length > 1 && (
+          <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setSlideIndex(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  i === slideIndex ? "w-6 bg-primary" : "w-2 bg-primary-foreground/50 hover:bg-primary-foreground/80"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
         <div className="container relative z-10 py-20 text-center text-primary-foreground">
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="mb-4 font-body text-sm uppercase tracking-[0.3em] text-primary-foreground/80">
             The Wild Is Waiting for You

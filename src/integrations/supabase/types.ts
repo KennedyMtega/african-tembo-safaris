@@ -310,6 +310,7 @@ export type Database = {
           title: string | null
           type: string
           url: string
+          usage: string | null
         }
         Insert: {
           created_at?: string
@@ -319,6 +320,7 @@ export type Database = {
           title?: string | null
           type: string
           url: string
+          usage?: string | null
         }
         Update: {
           created_at?: string
@@ -328,6 +330,7 @@ export type Database = {
           title?: string | null
           type?: string
           url?: string
+          usage?: string | null
         }
         Relationships: []
       }

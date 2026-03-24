@@ -66,11 +66,10 @@ serve(async (req) => {
       });
     }
 
-    // Use Lovable AI Gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
+        JSON.stringify({ error: "GEMINI_API_KEY is not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -81,7 +80,7 @@ serve(async (req) => {
     if (action === "generate") {
       systemPrompt = `You are a knowledge base content writer for a safari tour company called Tembo Safari. Generate professional, informative articles for the internal knowledge base that helps both customers (via AI chatbot) and staff.
 
-When generating an article, you MUST call the "save_article" tool with the structured article data. The article should be comprehensive, well-organized, and accurate for a safari/travel business context.
+When generating an article, you MUST call the "save_article" function with the structured article data. The article should be comprehensive, well-organized, and accurate for a safari/travel business context.
 
 Categories to choose from: FAQ, Destinations, Policies, Safety, Wildlife, Accommodation, Transportation, Booking, General`;
 
@@ -89,7 +88,7 @@ Categories to choose from: FAQ, Destinations, Policies, Safety, Wildlife, Accomm
     } else if (action === "improve") {
       systemPrompt = `You are a professional editor for a safari tour company's knowledge base. Improve the given article content to be more comprehensive, better organized, professional, and informative. Keep the same topic but enhance clarity, add useful details, and improve structure.
 
-You MUST call the "save_article" tool with the improved article data.`;
+You MUST call the "save_article" function with the improved article data.`;
 
       userPrompt = `Please improve this article:\n\nTitle: ${title || "Untitled"}\nCategory: ${category || "General"}\nTags: ${(tags || []).join(", ")}\n\nContent:\n${content || "No content provided"}`;
     } else if (action === "from_document") {
@@ -97,7 +96,7 @@ You MUST call the "save_article" tool with the improved article data.`;
 
 IMPORTANT: Only improve and clean up the content when strictly necessary. Preserve the original meaning, facts, and style as much as possible. Focus on organizing the content logically with clear sections rather than rewriting it.
 
-You MUST call the "save_article" tool with the structured article data.
+You MUST call the "save_article" function with the structured article data.
 
 Categories to choose from: FAQ, Destinations, Policies, Safety, Wildlife, Accommodation, Transportation, Booking, General`;
 
@@ -114,7 +113,7 @@ Categories to choose from: FAQ, Destinations, Policies, Safety, Wildlife, Accomm
 
       systemPrompt = `You are a knowledge base strategist for a safari tour company called Tembo Safari. Analyze the existing articles and suggest 5-8 new topics that are missing and would be valuable for both customers and staff.
 
-You MUST call the "suggest_topics" tool with your suggestions.
+You MUST call the "suggest_topics" function with your suggestions.
 
 Consider topics like: visa/travel requirements, packing lists, health & vaccinations, cancellation policies, payment info, wildlife guides, seasonal guides, accommodation details, transportation, safety protocols, cultural etiquette, photography tips, group booking info, etc.`;
 
@@ -123,20 +122,12 @@ Consider topics like: visa/travel requirements, packing lists, health & vaccinat
         : "The knowledge base is empty. Suggest the most essential articles a safari tour company should have.";
     }
 
-    const body: any = {
-      model: "google/gemini-3-flash-preview",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    };
+    // Build Gemini API request with function calling
+    const isArticleAction = action === "generate" || action === "improve" || action === "from_document";
 
-    // Use tool calling for structured output
-    if (action === "generate" || action === "improve" || action === "from_document") {
-      body.tools = [
-        {
-          type: "function",
-          function: {
+    const tools = isArticleAction
+      ? [{
+          functionDeclarations: [{
             name: "save_article",
             description: "Save or update a knowledge base article with structured data",
             parameters: {
@@ -144,21 +135,19 @@ Consider topics like: visa/travel requirements, packing lists, health & vaccinat
               properties: {
                 title: { type: "string", description: "Article title" },
                 content: { type: "string", description: "Full article content in plain text, well-structured with sections" },
-                category: { type: "string", description: "Article category", enum: ["FAQ", "Destinations", "Policies", "Safety", "Wildlife", "Accommodation", "Transportation", "Booking", "General"] },
+                category: {
+                  type: "string",
+                  description: "Article category",
+                  enum: ["FAQ", "Destinations", "Policies", "Safety", "Wildlife", "Accommodation", "Transportation", "Booking", "General"],
+                },
                 tags: { type: "array", items: { type: "string" }, description: "Relevant tags for the article" },
               },
               required: ["title", "content", "category", "tags"],
-              additionalProperties: false,
             },
-          },
-        },
-      ];
-      body.tool_choice = { type: "function", function: { name: "save_article" } };
-    } else {
-      body.tools = [
-        {
-          type: "function",
-          function: {
+          }],
+        }]
+      : [{
+          functionDeclarations: [{
             name: "suggest_topics",
             description: "Return suggested knowledge base topics",
             parameters: {
@@ -175,27 +164,34 @@ Consider topics like: visa/travel requirements, packing lists, health & vaccinat
                       priority: { type: "string", enum: ["high", "medium", "low"], description: "How important this article is" },
                     },
                     required: ["title", "description", "category", "priority"],
-                    additionalProperties: false,
                   },
                 },
               },
               required: ["suggestions"],
-              additionalProperties: false,
             },
-          },
-        },
-      ];
-      body.tool_choice = { type: "function", function: { name: "suggest_topics" } };
-    }
+          }],
+        }];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+    const toolConfig = {
+      functionCallingConfig: {
+        mode: "ANY",
+        allowedFunctionNames: [isArticleAction ? "save_article" : "suggest_topics"],
       },
-      body: JSON.stringify(body),
-    });
+    };
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          tools,
+          toolConfig,
+        }),
+      },
+    );
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -203,28 +199,24 @@ Consider topics like: visa/travel requirements, packing lists, health & vaccinat
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds in Lovable workspace settings." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+      console.error("Gemini API error:", response.status, errText);
+      return new Response(JSON.stringify({ error: "AI request failed" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const aiData = await response.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    const parts = aiData.candidates?.[0]?.content?.parts;
+    const functionCall = parts?.find((p: any) => p.functionCall)?.functionCall;
 
-    if (!toolCall?.function?.arguments) {
+    if (!functionCall?.args) {
       return new Response(JSON.stringify({ error: "AI did not return structured data" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const parsed = JSON.parse(toolCall.function.arguments);
+    const parsed = functionCall.args;
 
     if (action === "suggest") {
       return new Response(JSON.stringify({ suggestions: parsed.suggestions }), {
@@ -232,7 +224,7 @@ Consider topics like: visa/travel requirements, packing lists, health & vaccinat
       });
     }
 
-    // For generate/improve, return the article data
+    // For generate/improve/from_document, return the article data
     return new Response(JSON.stringify({ article: parsed }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -8,9 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { Image, Video, Trash2, Upload, GalleryHorizontalEnd, Sparkles, Loader2, Check, Pencil } from "lucide-react";
+import {
+  Image, Video, Trash2, Upload, GalleryHorizontalEnd, Sparkles,
+  Loader2, Check, Pencil, LayoutTemplate, User, X,
+} from "lucide-react";
 
 /* ---------- Inline Title Editor ---------- */
 function InlineTitleEditor({ id, currentTitle, onSaved }: { id: string; currentTitle: string; onSaved: () => void }) {
@@ -48,20 +52,17 @@ function InlineTitleEditor({ id, currentTitle, onSaved }: { id: string; currentT
   }
 
   return (
-    <form
-      className="flex items-center gap-1.5"
-      onSubmit={(e) => { e.preventDefault(); save(); }}
-    >
-      <Input
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        className="h-7 text-xs"
-        autoFocus
-        onBlur={save}
-        disabled={saving}
-      />
+    <form className="flex items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); save(); }}>
+      <Input value={value} onChange={(e) => setValue(e.target.value)} className="h-7 text-xs" autoFocus onBlur={save} disabled={saving} />
     </form>
   );
+}
+
+/* ---------- Usage Badge ---------- */
+function UsageBadge({ usage }: { usage: "hero" | "founder" | null }) {
+  if (usage === "hero") return <Badge className="gap-1 bg-primary/20 text-primary border-primary/30 text-[10px]"><LayoutTemplate className="h-2.5 w-2.5" />Hero</Badge>;
+  if (usage === "founder") return <Badge className="gap-1 bg-amber-500/20 text-amber-700 border-amber-400/30 text-[10px]"><User className="h-2.5 w-2.5" />Founder</Badge>;
+  return null;
 }
 
 /* ---------- Main Component ---------- */
@@ -70,6 +71,7 @@ export default function AdminGallery() {
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [title, setTitle] = useState("");
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   // AI generation state
   const [aiPrompt, setAiPrompt] = useState("");
@@ -85,14 +87,13 @@ export default function AdminGallery() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
     queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
+    queryClient.invalidateQueries({ queryKey: ["hero-slides"] });
+    queryClient.invalidateQueries({ queryKey: ["founder-photo"] });
   };
 
   const titleFromFilename = (name: string) => {
     const base = name.replace(/\.[^.]+$/, "");
-    return base
-      .replace(/[-_]+/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-      .trim();
+    return base.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()).trim();
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,24 +140,32 @@ export default function AdminGallery() {
     }
   };
 
-  const handleGenerateImages = async () => {
-    if (!aiPrompt.trim()) {
-      toast({ title: "Enter a prompt", variant: "destructive" });
-      return;
+  const handleSetUsage = async (id: string, current: "hero" | "founder" | null, target: "hero" | "founder") => {
+    setTogglingId(id);
+    try {
+      // Toggle off if already set to the same usage
+      const next = current === target ? null : target;
+      await galleryService.setUsage(id, next);
+      invalidate();
+      if (next === "hero") toast({ title: "Added to hero slideshow" });
+      else if (next === "founder") toast({ title: "Set as founder photo" });
+      else toast({ title: "Removed from usage" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setTogglingId(null);
     }
+  };
+
+  const handleGenerateImages = async () => {
+    if (!aiPrompt.trim()) { toast({ title: "Enter a prompt", variant: "destructive" }); return; }
     setGenerating(true);
     setGeneratedImages([]);
     try {
-      const variations = [
-        aiPrompt,
-        `${aiPrompt}, different angle, vibrant colors`,
-        `${aiPrompt}, dramatic lighting, wide shot`,
-      ];
+      const variations = [aiPrompt, `${aiPrompt}, different angle, vibrant colors`, `${aiPrompt}, dramatic lighting, wide shot`];
       const results: { image: string; crafted_prompt: string }[] = [];
       for (const prompt of variations) {
-        const { data, error } = await supabase.functions.invoke("generate-gallery-image", {
-          body: { prompt },
-        });
+        const { data, error } = await supabase.functions.invoke("generate-gallery-image", { body: { prompt } });
         if (error) throw error;
         if (data?.image) results.push({ image: data.image, crafted_prompt: data.crafted_prompt || "" });
       }
@@ -193,12 +202,42 @@ export default function AdminGallery() {
     }
   };
 
+  const heroCount = items.filter((i) => i.usage === "hero").length;
+  const founderSet = items.some((i) => i.usage === "founder");
+
   return (
     <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="flex items-center gap-2">
         <GalleryHorizontalEnd className="h-5 w-5 text-primary" />
         <span className="font-display text-lg font-semibold text-foreground">Gallery Management</span>
       </div>
+
+      {/* Usage summary */}
+      <div className="flex flex-wrap gap-3">
+        <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2 text-sm">
+          <LayoutTemplate className="h-4 w-4 text-primary" />
+          <span className="font-medium text-primary">{heroCount}</span>
+          <span className="text-muted-foreground">hero slide{heroCount !== 1 ? "s" : ""} selected</span>
+        </div>
+        <div className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm ${founderSet ? "border-amber-400/30 bg-amber-500/10" : "border-border/50 bg-muted/40"}`}>
+          <User className={`h-4 w-4 ${founderSet ? "text-amber-600" : "text-muted-foreground"}`} />
+          <span className={`font-medium ${founderSet ? "text-amber-700" : "text-muted-foreground"}`}>
+            {founderSet ? "Founder photo set" : "No founder photo set"}
+          </span>
+        </div>
+      </div>
+
+      {/* Instructions */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-4">
+          <p className="text-sm text-foreground font-medium mb-1">How to use tags</p>
+          <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+            <li><strong>Hero slide</strong> — image appears in the rotating homepage hero slideshow (pick as many as you like)</li>
+            <li><strong>Founder photo</strong> — image appears in the circular portrait on the About page (only one at a time)</li>
+            <li>Images with no tag appear only in the public gallery</li>
+          </ul>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Manual Upload */}
@@ -222,19 +261,8 @@ export default function AdminGallery() {
             <p className="text-xs text-muted-foreground">
               Describe an image and AI will generate 3 variations. Select the ones you want to add to the gallery.
             </p>
-            <Textarea
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              placeholder="e.g. African elephant at sunset in the Serengeti, photorealistic"
-              rows={3}
-              className="text-sm"
-            />
-            <Button
-              size="sm"
-              onClick={handleGenerateImages}
-              disabled={generating}
-              className="gap-1.5"
-            >
+            <Textarea value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="e.g. African elephant at sunset in the Serengeti, photorealistic" rows={3} className="text-sm" />
+            <Button size="sm" onClick={handleGenerateImages} disabled={generating} className="gap-1.5">
               {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               {generating ? "Generating…" : "Generate 3 Images"}
             </Button>
@@ -250,18 +278,9 @@ export default function AdminGallery() {
             <div className="grid gap-4 sm:grid-cols-3">
               {generatedImages.map((item, i) => (
                 <div key={i} className="group relative overflow-hidden rounded-lg border border-border/50 transition-all hover:border-primary/50">
-                  <img
-                    src={item.image.startsWith("data:") ? item.image : `data:image/png;base64,${item.image}`}
-                    alt={`Generated ${i + 1}`}
-                    className="aspect-video w-full object-cover"
-                  />
+                  <img src={item.image.startsWith("data:") ? item.image : `data:image/png;base64,${item.image}`} alt={`Generated ${i + 1}`} className="aspect-video w-full object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center bg-background/60 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Button
-                      size="sm"
-                      className="gap-1.5"
-                      disabled={savingAi === i}
-                      onClick={() => saveGeneratedImage(item, i)}
-                    >
+                    <Button size="sm" className="gap-1.5" disabled={savingAi === i} onClick={() => saveGeneratedImage(item, i)}>
                       {savingAi === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                       {savingAi === i ? "Saving…" : "Add to Gallery"}
                     </Button>
@@ -283,28 +302,73 @@ export default function AdminGallery() {
         {isLoading ? (
           <p className="col-span-full py-10 text-center text-muted-foreground">Loading…</p>
         ) : items.length === 0 ? (
-          <p className="col-span-full py-10 text-center text-muted-foreground">No gallery items yet.</p>
+          <p className="col-span-full py-10 text-center text-muted-foreground">No gallery items yet. Upload some photos above.</p>
         ) : (
-          items.map((item) => (
-            <Card key={item.id} className="overflow-hidden border-border/50">
-              <div className="relative aspect-video">
-                {item.type === "video" ? (
-                  <video src={item.url} muted loop className="h-full w-full object-cover" />
-                ) : (
-                  <img src={item.url} alt={item.title || "Gallery"} onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} className="h-full w-full object-cover" />
-                )}
-                <div className="absolute left-2 top-2">
-                  {item.type === "video" ? <Video className="h-4 w-4 text-primary-foreground drop-shadow" /> : <Image className="h-4 w-4 text-primary-foreground drop-shadow" />}
+          items.map((item) => {
+            const isToggling = togglingId === item.id;
+            return (
+              <Card key={item.id} className={`overflow-hidden border-2 transition-colors ${item.usage === "hero" ? "border-primary/50" : item.usage === "founder" ? "border-amber-400/50" : "border-border/50"}`}>
+                {/* Image / Video preview */}
+                <div className="relative aspect-video">
+                  {item.type === "video" ? (
+                    <video src={item.url} muted loop className="h-full w-full object-cover" />
+                  ) : (
+                    <img src={item.url} alt={item.title || "Gallery"} onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} className="h-full w-full object-cover" />
+                  )}
+                  {/* Type icon */}
+                  <div className="absolute left-2 top-2">
+                    {item.type === "video"
+                      ? <Video className="h-4 w-4 text-primary-foreground drop-shadow" />
+                      : <Image className="h-4 w-4 text-primary-foreground drop-shadow" />}
+                  </div>
+                  {/* Usage badge overlay */}
+                  {item.usage && (
+                    <div className="absolute right-2 top-2">
+                      <UsageBadge usage={item.usage} />
+                    </div>
+                  )}
                 </div>
-              </div>
-              <CardContent className="flex items-center justify-between p-3">
-                <InlineTitleEditor id={item.id} currentTitle={item.title || ""} onSaved={invalidate} />
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive" onClick={() => handleDelete(item.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </CardContent>
-            </Card>
-          ))
+
+                {/* Title + delete */}
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <InlineTitleEditor id={item.id} currentTitle={item.title || ""} onSaved={invalidate} />
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive" onClick={() => handleDelete(item.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Usage tag buttons — images only */}
+                  {item.type === "image" && (
+                    <div className="flex gap-1.5">
+                      <Button
+                        size="sm"
+                        variant={item.usage === "hero" ? "default" : "outline"}
+                        className={`h-7 flex-1 gap-1 text-[11px] ${item.usage === "hero" ? "bg-primary text-primary-foreground" : ""}`}
+                        disabled={isToggling}
+                        onClick={() => handleSetUsage(item.id, item.usage, "hero")}
+                        title="Toggle as hero slideshow image"
+                      >
+                        {isToggling ? <Loader2 className="h-3 w-3 animate-spin" /> : item.usage === "hero" ? <X className="h-3 w-3" /> : <LayoutTemplate className="h-3 w-3" />}
+                        Hero
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={item.usage === "founder" ? "default" : "outline"}
+                        className={`h-7 flex-1 gap-1 text-[11px] ${item.usage === "founder" ? "bg-amber-600 text-white hover:bg-amber-700 border-amber-600" : ""}`}
+                        disabled={isToggling}
+                        onClick={() => handleSetUsage(item.id, item.usage, "founder")}
+                        title="Set as founder portrait photo"
+                      >
+                        {isToggling ? <Loader2 className="h-3 w-3 animate-spin" /> : item.usage === "founder" ? <X className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                        Founder
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
     </motion.div>

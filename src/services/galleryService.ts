@@ -8,6 +8,7 @@ export interface GalleryItem {
   thumbnailUrl: string | null;
   sortOrder: number;
   createdAt: string;
+  usage: "hero" | "founder" | null;
 }
 
 function map(row: any): GalleryItem {
@@ -19,6 +20,7 @@ function map(row: any): GalleryItem {
     thumbnailUrl: row.thumbnail_url,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
+    usage: row.usage ?? null,
   };
 }
 
@@ -27,6 +29,16 @@ export const galleryService = {
     const { data, error } = await supabase
       .from("gallery_items")
       .select("*")
+      .order("sort_order");
+    if (error) throw error;
+    return (data || []).map(map);
+  },
+
+  async getByUsage(usage: "hero" | "founder"): Promise<GalleryItem[]> {
+    const { data, error } = await supabase
+      .from("gallery_items")
+      .select("*")
+      .eq("usage", usage)
       .order("sort_order");
     if (error) throw error;
     return (data || []).map(map);
@@ -58,6 +70,27 @@ export const galleryService = {
 
   async updateTitle(id: string, title: string): Promise<void> {
     const { error } = await supabase.from("gallery_items").update({ title }).eq("id", id);
+    if (error) throw error;
+  },
+
+  /**
+   * Assign or clear the usage tag for a gallery item.
+   * - 'hero'    → multiple items can be hero slides at once
+   * - 'founder' → only one at a time (previous founder tag is cleared first)
+   * - null      → removes the tag (item goes back to general gallery)
+   */
+  async setUsage(id: string, usage: "hero" | "founder" | null): Promise<void> {
+    if (usage === "founder") {
+      // Enforce single founder photo
+      await supabase
+        .from("gallery_items")
+        .update({ usage: null })
+        .eq("usage", "founder");
+    }
+    const { error } = await supabase
+      .from("gallery_items")
+      .update({ usage })
+      .eq("id", id);
     if (error) throw error;
   },
 
