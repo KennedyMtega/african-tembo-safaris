@@ -7,7 +7,9 @@ import SEOHead from "@/components/SEOHead";
 
 import heroSafari from "@/assets/hero-safari.jpg";
 import savannaBg from "@/assets/about-savanna-bg.jpg";
-import founderPhoto from "@/assets/founder-photo.jpg";
+import founderPhotoFallback from "@/assets/founder-photo.jpg";
+import { galleryService } from "@/services/galleryService";
+import { useQuery } from "@tanstack/react-query";
 import connectionImg from "@/assets/about-connection.png";
 import footprintImg from "@/assets/about-footprint.png";
 import expertiseImg from "@/assets/about-expertise.png";
@@ -85,6 +87,12 @@ const conservation = [
 ];
 
 export default function AboutPage() {
+  const { data: founderItems = [] } = useQuery({
+    queryKey: ["founder-photo"],
+    queryFn: () => galleryService.getByUsage("founder"),
+  });
+  const founderPhoto = founderItems[0]?.url || founderPhotoFallback;
+
   return (
     <>
       <SEOHead

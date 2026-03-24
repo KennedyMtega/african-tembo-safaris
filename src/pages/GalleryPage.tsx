@@ -3,16 +3,6 @@ import { galleryService, type GalleryItem } from "@/services/galleryService";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 import SEOHead from "@/components/SEOHead";
-import founderPhoto from "@/assets/founder-photo.jpg";
-
-// Static photos that are always shown regardless of the database
-const staticPhotos: { src: string; alt: string }[] = [
-  { src: "/gallery/hero-baobab-sunset.jpg",   alt: "Baobab tree silhouette at sunset" },
-  { src: "/gallery/hero-savanna-sunrise.jpg", alt: "Golden sunrise over the Tanzanian savanna" },
-  { src: "/gallery/hero-safari-group.jpg",    alt: "Safari group adventure at sunset" },
-  { src: "/gallery/hero-golden-grass.jpg",    alt: "Golden grasslands at sunrise" },
-  { src: founderPhoto,                        alt: "African Tembo Safaris — Mohamedi Shabani Mgomi, Founder & CEO" },
-];
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -90,60 +80,36 @@ export default function GalleryPage() {
       {/* Masonry image grid */}
       <section className="bg-background py-16">
         <div className="container">
-          <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">
-            {/* Static local photos — always visible */}
-            {staticPhotos.map((photo, i) => (
-              <motion.div
-                key={`static-${i}`}
-                custom={i}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-50px" }}
-                variants={itemVariants}
-                className="mb-4 break-inside-avoid group"
-              >
-                <div className="overflow-hidden rounded-lg">
-                  <img
-                    src={photo.src}
-                    alt={photo.alt}
-                    loading="lazy"
-                    onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
-                    className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-              </motion.div>
-            ))}
-
-            {/* Database-managed photos */}
-            {images.map((item, i) => (
-              <motion.div
-                key={item.id}
-                custom={staticPhotos.length + i}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-50px" }}
-                variants={itemVariants}
-                className="mb-4 break-inside-avoid group"
-              >
-                <div className="overflow-hidden rounded-lg">
-                  <img
-                    src={item.url}
-                    alt={item.title || "Safari gallery"}
-                    loading="lazy"
-                    onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
-                    className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                {item.title && (
-                  <p className="mt-1.5 text-sm font-medium text-foreground">{item.title}</p>
-                )}
-              </motion.div>
-            ))}
-
-            {images.length === 0 && videos.length === 0 && staticPhotos.length === 0 && (
-              <p className="py-20 text-center text-muted-foreground col-span-full">No gallery items yet.</p>
-            )}
-          </div>
+          {images.length === 0 && videos.length === 0 ? (
+            <p className="py-20 text-center text-muted-foreground">No gallery items yet.</p>
+          ) : (
+            <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">
+              {images.map((item, i) => (
+                <motion.div
+                  key={item.id}
+                  custom={i}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: "-50px" }}
+                  variants={itemVariants}
+                  className="mb-4 break-inside-avoid group"
+                >
+                  <div className="overflow-hidden rounded-lg">
+                    <img
+                      src={item.url}
+                      alt={item.title || "Safari gallery"}
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
+                      className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                  {item.title && (
+                    <p className="mt-1.5 text-sm font-medium text-foreground">{item.title}</p>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </>

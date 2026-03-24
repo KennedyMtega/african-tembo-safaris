@@ -10,16 +10,8 @@ import heroImageFallback from "@/assets/hero-safari.jpg";
 import { packageService } from "@/services/packageService";
 import { destinationService } from "@/services/destinationService";
 import { siteSettingsService, type HeroMedia } from "@/services/siteSettingsService";
+import { galleryService } from "@/services/galleryService";
 import { useQuery } from "@tanstack/react-query";
-
-// Hero slideshow images — replace placeholder files in /public/gallery/ with real photos
-const heroSlides = [
-  { src: heroImageFallback,                    alt: "African savanna at golden hour" },
-  { src: "/gallery/hero-baobab-sunset.jpg",    alt: "Baobab tree silhouette at sunset, Tanzania" },
-  { src: "/gallery/hero-savanna-sunrise.jpg",  alt: "Golden sunrise over the Tanzanian savanna" },
-  { src: "/gallery/hero-safari-group.jpg",     alt: "Safari group adventure at sunset" },
-  { src: "/gallery/hero-golden-grass.jpg",     alt: "Golden grasslands at sunrise, Tanzania" },
-];
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -35,18 +27,23 @@ export default function HomePage() {
   const { data: featured = [] } = useQuery({ queryKey: ["packages-featured"], queryFn: () => packageService.getFeatured() });
   const { data: destinations = [] } = useQuery({ queryKey: ["destinations"], queryFn: () => destinationService.getAll() });
   const { data: heroMedia } = useQuery({ queryKey: ["hero-media"], queryFn: () => siteSettingsService.get<HeroMedia>("hero_media") });
+  const { data: heroGallery = [] } = useQuery({ queryKey: ["hero-slides"], queryFn: () => galleryService.getByUsage("hero") });
 
   const showVideo = heroMedia?.mode === "video" && heroMedia.videoUrl;
-  // If admin set a custom image, use only that; otherwise cycle through all slides
   const adminImage = heroMedia?.imageUrl;
+
+  // Build slides: gallery-tagged images first, then fallback to default
+  const slides = heroGallery.length > 0
+    ? heroGallery.map((item) => ({ src: item.url, alt: item.title || "African safari landscape" }))
+    : [{ src: heroImageFallback, alt: "African savanna at golden hour with elephants" }];
 
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
-    if (showVideo || adminImage) return;
-    const id = setInterval(() => setSlideIndex((i) => (i + 1) % heroSlides.length), 5000);
+    if (showVideo || adminImage || slides.length <= 1) return;
+    const id = setInterval(() => setSlideIndex((i) => (i + 1) % slides.length), 5000);
     return () => clearInterval(id);
-  }, [showVideo, adminImage]);
+  }, [showVideo, adminImage, slides.length]);
 
   return (
     <>
@@ -61,8 +58,8 @@ export default function HomePage() {
           <AnimatePresence mode="sync">
             <motion.img
               key={slideIndex}
-              src={heroSlides[slideIndex].src}
-              alt={heroSlides[slideIndex].alt}
+              src={slides[slideIndex].src}
+              alt={slides[slideIndex].alt}
               initial={{ opacity: 0, scale: 1.04 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
@@ -75,9 +72,9 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/40 to-foreground/20" />
 
         {/* Slide indicator dots */}
-        {!showVideo && !adminImage && (
+        {!showVideo && !adminImage && slides.length > 1 && (
           <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2">
-            {heroSlides.map((_, i) => (
+            {slides.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setSlideIndex(i)}
