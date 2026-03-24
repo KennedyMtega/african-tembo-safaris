@@ -16,15 +16,16 @@ import { userService } from "@/services/userService";
 import { siteSettingsService, type HeroMedia } from "@/services/siteSettingsService";
 import { compressImage } from "@/lib/compressImage";
 import { supabase } from "@/integrations/supabase/client";
+import { Textarea } from "@/components/ui/textarea";
 import { Settings, Save, Users, Plus, Shield, ShieldCheck, UserMinus, Image, Video, Bot, Eye, EyeOff, Share2, Building2, Sparkles, Loader2, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const defaultSettings: CompanySettings = {
-  name: "Tembo Safari Co.",
-  email: "info@tembo.safari",
+  name: "African Tembo Safaris",
+  email: "info@africantembo.com",
   phone: "+255 123 456 789",
-  address: "123 Safari Drive, Arusha, Tanzania",
+  address: "Serengeti Road, Arusha, Tanzania, East Africa",
   currency: "USD",
   timezone: "Africa/Dar_es_Salaam",
   logoUrl: "",
@@ -69,8 +70,13 @@ export default function AdminSettings() {
     whatsapp: "",
   });
   const [socialSaving, setSocialSaving] = useState(false);
+  const [contactSaving, setContactSaving] = useState(false);
 
   useEffect(() => {
+    // Load saved contact info
+    siteSettingsService.get<{ name: string; email: string; phone: string; address: string; officeHours: string }>("contact_info").then((val) => {
+      if (val) setSettings((prev) => ({ ...prev, ...val }));
+    });
     siteSettingsService.get<HeroMedia>("hero_media").then((val) => {
       if (val) {
         setHeroMode(val.mode || "image");
@@ -101,8 +107,22 @@ export default function AdminSettings() {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSave = () => {
-    toast({ title: "Settings saved" });
+  const handleSave = async () => {
+    setContactSaving(true);
+    try {
+      await siteSettingsService.set("contact_info", {
+        name: settings.name,
+        email: settings.email,
+        phone: settings.phone,
+        address: settings.address,
+        officeHours: (settings as any).officeHours || "Mon–Fri: 8:00 AM – 6:00 PM (EAT)\nSaturday: 9:00 AM – 1:00 PM\nSunday: Closed",
+      });
+      toast({ title: "Contact info saved", description: "Changes are now live on the Contact page." });
+    } catch (err: any) {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    } finally {
+      setContactSaving(false);
+    }
   };
 
   const handleInvite = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -222,12 +242,25 @@ export default function AdminSettings() {
         <TabsContent value="company" className="mt-6 space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <Card className="border-border/50">
-              <CardHeader><CardTitle className="text-base">Company Profile</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="text-base">Contact Information</CardTitle>
+                <p className="text-xs text-muted-foreground">These details appear live on the public Contact page.</p>
+              </CardHeader>
               <CardContent className="space-y-4">
                 <div><Label>Company Name</Label><Input value={settings.name} onChange={(e) => update("name", e.target.value)} /></div>
-                <div><Label>Email</Label><Input value={settings.email} onChange={(e) => update("email", e.target.value)} /></div>
+                <div><Label>Email</Label><Input type="email" value={settings.email} onChange={(e) => update("email", e.target.value)} /></div>
                 <div><Label>Phone</Label><Input value={settings.phone} onChange={(e) => update("phone", e.target.value)} /></div>
                 <div><Label>Address</Label><Input value={settings.address} onChange={(e) => update("address", e.target.value)} /></div>
+                <div>
+                  <Label>Office Hours</Label>
+                  <Textarea
+                    value={(settings as any).officeHours ?? "Mon–Fri: 8:00 AM – 6:00 PM (EAT)\nSaturday: 9:00 AM – 1:00 PM\nSunday: Closed"}
+                    onChange={(e) => update("officeHours" as any, e.target.value)}
+                    rows={3}
+                    className="text-sm"
+                    placeholder="Mon–Fri: 8:00 AM – 6:00 PM (EAT)..."
+                  />
+                </div>
               </CardContent>
             </Card>
 
@@ -275,7 +308,10 @@ export default function AdminSettings() {
               </CardContent>
             </Card>
           </div>
-          <Button className="gap-2" onClick={handleSave}><Save className="h-4 w-4" /> Save Settings</Button>
+          <Button className="gap-2" onClick={handleSave} disabled={contactSaving}>
+            {contactSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {contactSaving ? "Saving…" : "Save Contact Info"}
+          </Button>
         </TabsContent>
 
         {/* Team Management Tab */}
