@@ -38,13 +38,13 @@ export function Footer() {
   const { data: socialLinks } = useQuery({
     queryKey: ["social-links"],
     queryFn: () => siteSettingsService.get<SocialLinks>("social_links"),
-    staleTime: 60000,
+    staleTime: 0,
   });
 
   const { data: contactInfo } = useQuery({
     queryKey: ["contact-info"],
     queryFn: () => siteSettingsService.get<ContactInfo>("contact_info"),
-    staleTime: 60000,
+    staleTime: 0,
   });
 
   const phone = contactInfo?.phone || "+255 123 456 789";

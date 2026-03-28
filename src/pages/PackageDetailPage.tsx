@@ -26,13 +26,52 @@ export default function PackageDetailPage() {
   const related = allPackages.filter((p) => p.id !== pkg.id).slice(0, 3);
   const [mainImage, ...thumbs] = pkg.images.length > 0 ? pkg.images : ["/placeholder.svg"];
 
+  const packageSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": pkg.title,
+    "description": pkg.shortDescription || pkg.description || `${pkg.title} safari package with African Tembo Safaris`,
+    "image": pkg.images,
+    "url": `https://africantembosafaris.com/packages/${pkg.slug}`,
+    "brand": {"@type": "Brand", "name": "African Tembo Safaris"},
+    "category": "Safari Package",
+    "offers": {
+      "@type": "AggregateOffer",
+      "priceCurrency": "USD",
+      "lowPrice": pkg.priceMin,
+      "highPrice": pkg.priceMax || pkg.priceMin,
+      "offerCount": 1,
+      "availability": "https://schema.org/InStock",
+      "validFrom": new Date().toISOString().split("T")[0],
+      "seller": {"@type": "Organization", "name": "African Tembo Safaris"}
+    },
+    ...(pkg.rating > 0 && {
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": pkg.rating,
+        "reviewCount": pkg.reviewCount || 1,
+        "bestRating": 5,
+        "worstRating": 1
+      }
+    }),
+    "additionalProperty": [
+      {"@type": "PropertyValue", "name": "Duration", "value": `${pkg.duration} days`},
+      {"@type": "PropertyValue", "name": "Destination", "value": pkg.destination},
+      {"@type": "PropertyValue", "name": "Difficulty", "value": pkg.difficulty},
+      {"@type": "PropertyValue", "name": "Max Group Size", "value": pkg.maxGroupSize}
+    ]
+  };
+
   return (
     <section className="bg-background py-10 md:py-16">
       <SEOHead
         title={pkg.title}
-        description={pkg.shortDescription || pkg.description?.slice(0, 155) || `Book the ${pkg.title} safari package with African Tembo Safari`}
+        description={pkg.shortDescription || pkg.description?.slice(0, 155) || `Book the ${pkg.title} safari package with African Tembo Safaris. ${pkg.duration} days in ${pkg.destination}, Tanzania.`}
+        keywords={`${pkg.title}, ${pkg.destination} safari, Tanzania safari package, ${pkg.tags.join(", ")}, ${pkg.difficulty} safari, ${pkg.duration} day safari Tanzania, African Tembo Safaris`}
         ogImage={pkg.images[0]}
         ogType="product"
+        canonical={`/packages/${pkg.slug}`}
+        structuredData={packageSchema}
       />
       <div className="container">
         <nav className="mb-6 flex items-center gap-1 text-sm text-muted-foreground">

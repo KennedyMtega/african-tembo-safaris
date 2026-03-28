@@ -34,7 +34,12 @@ export default function PackagesPage() {
 
   return (
     <>
-    <SEOHead title="Safari Packages" description="Browse our curated selection of Tanzania safari packages — Serengeti, Ngorongoro, Kilimanjaro, Zanzibar and more. Book your dream safari today." />
+    <SEOHead
+      title="Tanzania Safari Packages"
+      description="Browse African Tembo Safaris' curated Tanzania safari packages — Serengeti wildebeest migration, Ngorongoro Crater, Kilimanjaro treks, Zanzibar beach & more. Luxury, budget & family safaris. Book direct from Arusha."
+      keywords="Tanzania safari packages, Serengeti safari packages, Ngorongoro safari tour, Kilimanjaro trek packages, Zanzibar safari combo, family safari Tanzania, luxury safari Tanzania, budget safari Tanzania, 7 day safari Tanzania, 10 day safari Tanzania, East Africa wildlife tour, Tanzania wildlife packages 2025"
+      canonical="/packages"
+    />
     <section className="bg-background py-12 md:py-20">
       <div className="container">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
