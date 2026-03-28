@@ -61,7 +61,12 @@ export default function ContactPage() {
 
   return (
     <>
-    <SEOHead title="Contact Us" description="Get in touch with African Tembo Safari. Plan your dream Tanzania safari — Serengeti, Ngorongoro, Kilimanjaro, Zanzibar. We respond within 24 hours." />
+    <SEOHead
+      title="Contact Us — Plan Your Tanzania Safari"
+      description="Contact African Tembo Safaris to plan your dream Tanzania safari. Get a free personalised quote for Serengeti, Ngorongoro, Kilimanjaro & Zanzibar trips. Arusha-based experts respond within 24 hours."
+      keywords="contact African Tembo Safaris, Tanzania safari quote, plan safari Tanzania, safari enquiry, Arusha safari contact, book Tanzania safari, safari consultation"
+      canonical="/contact"
+    />
     <section className="bg-background py-12 md:py-20">
       <div className="container max-w-5xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
