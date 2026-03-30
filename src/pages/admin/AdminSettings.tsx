@@ -73,9 +73,14 @@ export default function AdminSettings() {
   const [contactSaving, setContactSaving] = useState(false);
 
   useEffect(() => {
-    // Load saved contact info
+    // Load saved contact info — and immediately re-save it with is_public=true
+    // so the public footer/Contact page can read it even if the DB row has is_public=false
     siteSettingsService.get<{ name: string; email: string; phone: string; address: string; officeHours: string }>("contact_info").then((val) => {
-      if (val) setSettings((prev) => ({ ...prev, ...val }));
+      if (val) {
+        setSettings((prev) => ({ ...prev, ...val }));
+        // Silent repair: ensure is_public=true on this row for public visitors
+        siteSettingsService.set("contact_info", val).catch(() => {});
+      }
     });
     siteSettingsService.get<HeroMedia>("hero_media").then((val) => {
       if (val) {
