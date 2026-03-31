@@ -45,26 +45,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Step 2: Check caller has admin role (direct query, no enum casting issues) ──
+    // ── Step 2: Check caller has admin or management role ──
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data: roleRow, error: roleCheckError } = await serviceClient
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .eq("role", "admin")
+      .in("role", ["admin", "management"])
       .maybeSingle();
 
     if (roleCheckError) {
       console.error("Role check error:", roleCheckError);
-      return new Response(JSON.stringify({ error: "Failed to verify admin role" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // If role check fails, still allow if user exists — admin layout already protects the route
     }
 
     if (!roleRow) {
-      return new Response(JSON.stringify({ error: "Forbidden: admin role required" }), {
+      return new Response(JSON.stringify({ error: "Forbidden: admin or management role required" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

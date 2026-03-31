@@ -47,9 +47,9 @@ export function Footer() {
     staleTime: 0,
   });
 
-  const phone = contactInfo?.phone || "+255 123 456 789";
-  const email = contactInfo?.email || "info@africantembo.com";
-  const address = contactInfo?.address?.split("\n")[0] || "Arusha, Tanzania";
+  const phone = contactInfo?.phone || "+255 715812423";
+  const email = contactInfo?.email || "mohammed@africantembosafaris.com";
+  const address = contactInfo?.address?.split("\n")[0] || "Serengeti Road, Arusha, Tanzania, East Africa";
 
   const activeSocials = socialLinks
     ? Object.entries(socialLinks).filter(([, url]) => url && url.trim())
