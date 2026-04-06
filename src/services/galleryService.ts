@@ -8,7 +8,7 @@ export interface GalleryItem {
   thumbnailUrl: string | null;
   sortOrder: number;
   createdAt: string;
-  usage: "hero" | "founder" | null;
+  usage: "hero" | "founder" | "cofounder" | null;
 }
 
 function map(row: any): GalleryItem {
@@ -34,7 +34,7 @@ export const galleryService = {
     return (data || []).map(map);
   },
 
-  async getByUsage(usage: "hero" | "founder"): Promise<GalleryItem[]> {
+  async getByUsage(usage: "hero" | "founder" | "cofounder"): Promise<GalleryItem[]> {
     const { data, error } = await supabase
       .from("gallery_items")
       .select("*")
@@ -79,13 +79,20 @@ export const galleryService = {
    * - 'founder' → only one at a time (previous founder tag is cleared first)
    * - null      → removes the tag (item goes back to general gallery)
    */
-  async setUsage(id: string, usage: "hero" | "founder" | null): Promise<void> {
+  async setUsage(id: string, usage: "hero" | "founder" | "cofounder" | null): Promise<void> {
     if (usage === "founder") {
       // Enforce single founder photo
       await supabase
         .from("gallery_items")
         .update({ usage: null })
         .eq("usage", "founder");
+    }
+    if (usage === "cofounder") {
+      // Enforce single co-founder photo
+      await supabase
+        .from("gallery_items")
+        .update({ usage: null })
+        .eq("usage", "cofounder");
     }
     const { error } = await supabase
       .from("gallery_items")

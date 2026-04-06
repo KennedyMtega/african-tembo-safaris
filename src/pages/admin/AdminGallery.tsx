@@ -59,9 +59,10 @@ function InlineTitleEditor({ id, currentTitle, onSaved }: { id: string; currentT
 }
 
 /* ---------- Usage Badge ---------- */
-function UsageBadge({ usage }: { usage: "hero" | "founder" | null }) {
+function UsageBadge({ usage }: { usage: "hero" | "founder" | "cofounder" | null }) {
   if (usage === "hero") return <Badge className="gap-1 bg-primary/20 text-primary border-primary/30 text-[10px]"><LayoutTemplate className="h-2.5 w-2.5" />Hero</Badge>;
   if (usage === "founder") return <Badge className="gap-1 bg-amber-500/20 text-amber-700 border-amber-400/30 text-[10px]"><User className="h-2.5 w-2.5" />Founder</Badge>;
+  if (usage === "cofounder") return <Badge className="gap-1 bg-emerald-500/20 text-emerald-700 border-emerald-400/30 text-[10px]"><User className="h-2.5 w-2.5" />Co-Founder</Badge>;
   return null;
 }
 
@@ -89,6 +90,7 @@ export default function AdminGallery() {
     queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
     queryClient.invalidateQueries({ queryKey: ["hero-slides"] });
     queryClient.invalidateQueries({ queryKey: ["founder-photo"] });
+    queryClient.invalidateQueries({ queryKey: ["cofounder-photo"] });
   };
 
   const titleFromFilename = (name: string) => {
@@ -149,6 +151,7 @@ export default function AdminGallery() {
       invalidate();
       if (next === "hero") toast({ title: "Added to hero slideshow" });
       else if (next === "founder") toast({ title: "Set as founder photo" });
+      else if (next === "cofounder") toast({ title: "Set as co-founder photo" });
       else toast({ title: "Removed from usage" });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -204,6 +207,7 @@ export default function AdminGallery() {
 
   const heroCount = items.filter((i) => i.usage === "hero").length;
   const founderSet = items.some((i) => i.usage === "founder");
+  const cofounderSet = items.some((i) => i.usage === "cofounder");
 
   return (
     <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -225,6 +229,12 @@ export default function AdminGallery() {
             {founderSet ? "Founder photo set" : "No founder photo set"}
           </span>
         </div>
+        <div className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm ${cofounderSet ? "border-emerald-400/30 bg-emerald-500/10" : "border-border/50 bg-muted/40"}`}>
+          <User className={`h-4 w-4 ${cofounderSet ? "text-emerald-600" : "text-muted-foreground"}`} />
+          <span className={`font-medium ${cofounderSet ? "text-emerald-700" : "text-muted-foreground"}`}>
+            {cofounderSet ? "Co-Founder photo set" : "No co-founder photo set"}
+          </span>
+        </div>
       </div>
 
       {/* Instructions */}
@@ -234,6 +244,7 @@ export default function AdminGallery() {
           <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
             <li><strong>Hero slide</strong> — image appears in the rotating homepage hero slideshow (pick as many as you like)</li>
             <li><strong>Founder photo</strong> — image appears in the circular portrait on the About page (only one at a time)</li>
+            <li><strong>Co-Founder photo</strong> — image appears in the co-founder section on the About page (only one at a time)</li>
             <li>Images with no tag appear only in the public gallery</li>
           </ul>
         </CardContent>
@@ -307,7 +318,7 @@ export default function AdminGallery() {
           items.map((item) => {
             const isToggling = togglingId === item.id;
             return (
-              <Card key={item.id} className={`overflow-hidden border-2 transition-colors ${item.usage === "hero" ? "border-primary/50" : item.usage === "founder" ? "border-amber-400/50" : "border-border/50"}`}>
+              <Card key={item.id} className={`overflow-hidden border-2 transition-colors ${item.usage === "hero" ? "border-primary/50" : item.usage === "founder" ? "border-amber-400/50" : item.usage === "cofounder" ? "border-emerald-400/50" : "border-border/50"}`}>
                 {/* Image / Video preview */}
                 <div className="relative aspect-video">
                   {item.type === "video" ? (
@@ -362,6 +373,17 @@ export default function AdminGallery() {
                       >
                         {isToggling ? <Loader2 className="h-3 w-3 animate-spin" /> : item.usage === "founder" ? <X className="h-3 w-3" /> : <User className="h-3 w-3" />}
                         Founder
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={item.usage === "cofounder" ? "default" : "outline"}
+                        className={`h-7 flex-1 gap-1 text-[11px] ${item.usage === "cofounder" ? "bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-600" : ""}`}
+                        disabled={isToggling}
+                        onClick={() => handleSetUsage(item.id, item.usage, "cofounder")}
+                        title="Set as co-founder portrait photo"
+                      >
+                        {isToggling ? <Loader2 className="h-3 w-3 animate-spin" /> : item.usage === "cofounder" ? <X className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                        Co-Founder
                       </Button>
                     </div>
                   )}
