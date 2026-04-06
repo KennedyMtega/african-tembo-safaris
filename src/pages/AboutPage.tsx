@@ -93,6 +93,12 @@ export default function AboutPage() {
   });
   const founderPhoto = founderItems[0]?.url || founderPhotoFallback;
 
+  const { data: cofounderItems = [] } = useQuery({
+    queryKey: ["cofounder-photo"],
+    queryFn: () => galleryService.getByUsage("cofounder"),
+  });
+  const cofounderPhoto = cofounderItems[0]?.url || null;
+
   return (
     <>
       <SEOHead
@@ -381,6 +387,77 @@ export default function AboutPage() {
                   Safaris to bridge the gap between the luxury of a modern holiday and the raw,
                   untamed spirit of my home. To me, every guest is more than a traveler; you are a
                   storyteller in the making."
+                </blockquote>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ─── CO-FOUNDER ─── */}
+      <section className="py-20 md:py-28">
+        <div className="container max-w-4xl">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-12 text-center font-display text-3xl font-bold text-foreground md:text-4xl"
+          >
+            Meet the Co-Founder
+          </motion.h2>
+
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.7 }}
+          >
+            <Card className="overflow-hidden border-border/50">
+              {/* Savanna banner */}
+              <div className="relative h-40 w-full overflow-hidden md:h-48">
+                <img
+                  src={savannaBg}
+                  alt="Savanna backdrop"
+                  onError={(e) => { (e.target as HTMLImageElement).src = fallback; }}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[hsl(var(--deep-black)/0.55)]" />
+              </div>
+
+              {/* Content below banner */}
+              <div className="relative flex flex-col items-center px-8 pb-10 pt-0 text-center md:px-14">
+                {/* Circle portrait — overlaps the banner */}
+                <div className="relative -mt-16 mb-5 h-32 w-32 flex-shrink-0 overflow-hidden rounded-full border-4 border-background shadow-lg md:-mt-20 md:h-40 md:w-40 bg-muted">
+                  {cofounderPhoto ? (
+                    <img
+                      src={cofounderPhoto}
+                      alt="Idd Masoud Kilanga — Co-Founder & Operations Director of African Tembo Safaris"
+                      onError={(e) => { (e.target as HTMLImageElement).src = fallback; }}
+                      className="h-full w-full object-cover object-top"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground text-xs text-center px-2">
+                      Photo coming soon
+                    </div>
+                  )}
+                </div>
+
+                <h3 className="font-display text-2xl font-semibold text-foreground">
+                  Idd Masoud Kilanga
+                </h3>
+                <p className="mt-1 text-sm font-medium text-primary">Co-Founder &amp; Operations Director</p>
+                <p className="mt-1 text-xs text-muted-foreground">Based in Arusha, Tanzania</p>
+
+                <blockquote className="mt-6 max-w-2xl text-sm text-muted-foreground italic leading-relaxed border-l-4 border-primary/40 pl-4 text-left">
+                  "A great safari is never just one person's vision — it is a symphony of trust,
+                  coordination, and passion working behind every sunrise drive and every campfire
+                  story. I joined African Tembo Safaris because I believe in building something
+                  larger than ourselves: a bridge between the warmth of Tanzanian hospitality and
+                  the wonder of travelers who arrive as strangers and leave as family. Every
+                  logistic I plan, every partnership I nurture, is a promise that your journey
+                  will be flawless from the first step to the last."
                 </blockquote>
               </div>
             </Card>
