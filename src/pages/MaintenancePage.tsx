@@ -130,13 +130,7 @@ export default function MaintenancePage() {
             mohammed@africantembosafaris.com
           </a>
           &nbsp;&middot;&nbsp;
-          <a
-            href="tel:+255715812423"
-            className="underline underline-offset-4 transition-opacity hover:opacity-80"
-            style={{ color: "hsl(38 70% 70%)" }}
-          >
-            +255 715 812 423
-          </a>
+          
         </motion.p>
       </div>
 
