@@ -46,6 +46,7 @@ import CustomerBookings from "@/pages/customer/CustomerBookings";
 import CustomerWishlist from "@/pages/customer/CustomerWishlist";
 import CustomerProfile from "@/pages/customer/CustomerProfile";
 import NotFound from "./pages/NotFound";
+import MaintenancePage from "./pages/MaintenancePage";
 
 const queryClient = new QueryClient();
 
@@ -57,21 +58,22 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public */}
-            <Route element={<PublicLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/packages" element={<PackagesPage />} />
-              <Route path="/packages/:slug" element={<PackageDetailPage />} />
-              <Route path="/book/:slug" element={<BookingPage />} />
-              <Route path="/booking-confirmation/:ref" element={<BookingConfirmation />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/destinations" element={<DestinationsPage />} />
-              <Route path="/faq" element={<FaqPage />} />
-              <Route path="/terms" element={<TermsPage />} />
-              <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/gallery" element={<GalleryPage />} />
-            </Route>
+            {/* ── MAINTENANCE MODE ─────────────────────────────────────
+                 Replace public routes with the maintenance page.
+                 To restore the site, revert these routes back.
+            ────────────────────────────────────────────────────── */}
+            <Route path="/" element={<MaintenancePage />} />
+            <Route path="/packages" element={<MaintenancePage />} />
+            <Route path="/packages/:slug" element={<MaintenancePage />} />
+            <Route path="/book/:slug" element={<MaintenancePage />} />
+            <Route path="/booking-confirmation/:ref" element={<MaintenancePage />} />
+            <Route path="/about" element={<MaintenancePage />} />
+            <Route path="/contact" element={<MaintenancePage />} />
+            <Route path="/destinations" element={<MaintenancePage />} />
+            <Route path="/faq" element={<MaintenancePage />} />
+            <Route path="/terms" element={<MaintenancePage />} />
+            <Route path="/privacy" element={<MaintenancePage />} />
+            <Route path="/gallery" element={<MaintenancePage />} />
 
             {/* Auth */}
             <Route path="/login" element={<LoginPage />} />
