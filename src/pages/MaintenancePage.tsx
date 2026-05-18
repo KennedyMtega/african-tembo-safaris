@@ -114,30 +114,7 @@ export default function MaintenancePage() {
         />
 
         {/* Contact line */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.95, duration: 0.6 }}
-          className="text-xs tracking-wide"
-          style={{ color: "hsl(30 20% 70%)", fontFamily: "'Source Sans 3', sans-serif" }}
-        >
-          Questions?&nbsp;
-          <a
-            href="mailto:mohammed@africantembosafaris.com"
-            className="underline underline-offset-4 transition-opacity hover:opacity-80"
-            style={{ color: "hsl(38 70% 70%)" }}
-          >
-            mohammed@africantembosafaris.com
-          </a>
-          &nbsp;&middot;&nbsp;
-          <a
-            href="tel:+255715812423"
-            className="underline underline-offset-4 transition-opacity hover:opacity-80"
-            style={{ color: "hsl(38 70% 70%)" }}
-          >
-            +255 715 812 423
-          </a>
-        </motion.p>
+        
       </div>
 
       {/* Animated elephant silhouette */}
