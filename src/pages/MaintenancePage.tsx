@@ -113,8 +113,6 @@ export default function MaintenancePage() {
           style={{ background: "hsl(38 70% 55% / 0.4)" }}
         />
 
-        {/* Contact line */}
-        
       </div>
 
       {/* Animated elephant silhouette */}
