@@ -113,25 +113,6 @@ export default function MaintenancePage() {
           style={{ background: "hsl(38 70% 55% / 0.4)" }}
         />
 
-        {/* Contact line */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.95, duration: 0.6 }}
-          className="text-xs tracking-wide"
-          style={{ color: "hsl(30 20% 70%)", fontFamily: "'Source Sans 3', sans-serif" }}
-        >
-          Questions?&nbsp;
-          <a
-            href="mailto:mohammed@africantembosafaris.com"
-            className="underline underline-offset-4 transition-opacity hover:opacity-80"
-            style={{ color: "hsl(38 70% 70%)" }}
-          >
-            mohammed@africantembosafaris.com
-          </a>
-          &nbsp;&middot;&nbsp;
-          
-        </motion.p>
       </div>
 
       {/* Animated elephant silhouette */}
